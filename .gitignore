@@ -1,0 +1,29 @@
+out/
+*_m.h
+*_m.cc
+.qtenvrc
+.cmdenv-log
+
+# ignore executable
+src/prototype
+src/prototype_dbg
+
+results/
+
+# It's unclear if Makefile should be included
+# But auto-generated Makefile's probably should not, hence this default ignore
+Makefile
+
+# All these files are IDE specific (i.e. Eclipse)
+# But, they should NOT be ignored
+# .project
+# simulations/run
+# .cproject
+# .nedexclusions
+# .nedfolders
+# .oppbuildspec
+# .oppfeaturestate
+
+# Ignore, IDE specific AND user specific
+.settings/
+.metadata
