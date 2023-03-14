@@ -1,0 +1,14 @@
+<config>
+	<interface hosts='server' address='10.1.1.x' netmask='255.255.255.x' />
+	<!-- <interface hosts='serverGateway' towards='server' address='10.1.1.x' netmask='255.255.255.x'/> -->
+	<interface hosts='serverGateway' towards='routersAlongPath[*]' address='10.2.1.x' netmask='255.255.255.x'/>
+	<interface hosts="serverGateway" names="ppp0" address="10.x.x.x" netmask="255.255.255.x"/> <!-- add automatically other subnet interfaces to routers -->
+	<interface hosts="routersAlongPath[*]" names="ppp0" address="10.x.x.x" netmask="255.255.255.x"/> <!-- add automatically other subnet interfaces to routers -->
+	<interface hosts='routersAlongPath[0]' names="wlan0" address='10.2.2.1' netmask='255.255.255.240' />
+	<interface hosts='routersAlongPath[1]' names="wlan0" address='10.2.3.1' netmask='255.255.255.240' />
+	<interface hosts='routersAlongPath[2]' names="wlan0" address='10.2.4.1' netmask='255.255.255.240' />
+	<interface hosts='routersAlongPath[3]' names="wlan0" address='10.2.5.1' netmask='255.255.255.240' />
+	<interface hosts='routersAlongPath[4]' names="wlan0" address='10.2.6.1' netmask='255.255.255.240' />
+	<!-- <autoroute metric="errorRate"/> means that a static route is added, through which it becomes impossible to send packets to other routers, even with mobility (in static case) -->
+	<!-- <route hosts="serverGateway" destination="10.2.6.0" netmask="255.255.255.240" interface="ppp5"/> -->
+</config>
