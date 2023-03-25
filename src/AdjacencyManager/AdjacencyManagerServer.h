@@ -35,6 +35,7 @@ class AdjacencyManagerServer: public AdjacencyManager {
     LocLeased leased;
 
     unsigned int maxNumOfClients = 0;
+    inet::L3Address locator;
     inet::Ipv4Address subnetMask;
     inet::Ipv4Address ipAddressStart;
 

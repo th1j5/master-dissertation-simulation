@@ -46,14 +46,12 @@ void AdjacencyManagerServer::handleAdjMgmtMessage(inet::Packet *packet) {
     int inputInterfaceId = packet->getTag<InterfaceInd>()->getInterfaceId();
     if (inputInterfaceId != ie->getInterfaceId()) {
         EV_WARN << "AdjMessage arrived on a different interface, dropping\n";
-        delete packet;
         return;
     }
     L3Address assignedLoc = assignLoc(msg->getCID());
     sendAssignLocPacket(msg, assignedLoc);
 
-    EV_DEBUG << "Deleting " << packet << "." << endl;
-    delete packet;
+    EV_DEBUG << "Deleting " << packet << "." << endl; // happens by caller
     numReceived++;
 }
 
@@ -100,6 +98,7 @@ void AdjacencyManagerServer::sendAssignLocPacket(const Ptr<const AdjMgmtMessage>
     assignLoc->setCID(msg->getCID()); // client mac address...
     assignLoc->setChunkLength(B(length));
     assignLoc->setAssignedLoc(assignedLoc);
+    assignLoc->setSLoc(locator);
     assignLoc->setSubnetMask(subnetMask);
 
     packet->insertAtBack(assignLoc);
@@ -123,6 +122,7 @@ void AdjacencyManagerServer::handleStartOperation(LifecycleOperation *operation)
     auto ipv4data = ie->getProtocolData<Ipv4InterfaceData>();
     subnetMask = ipv4data->getNetmask();
     uint32_t networkStartAddress = ipv4data->getIPAddress().getInt() & ipv4data->getNetmask().getInt();
+    locator = L3Address(ipv4data->getIPAddress());
     ipAddressStart = Ipv4Address(networkStartAddress + 2); // hardcode reserved addresses
     if (!Ipv4Address::maskedAddrAreEqual(ipv4data->getIPAddress(), Ipv4Address(ipAddressStart.getInt() + maxNumOfClients - 1), subnetMask))
         throw cRuntimeError("Not enough IP addresses in subnet for %d clients", maxNumOfClients);

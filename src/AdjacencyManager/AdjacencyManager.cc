@@ -59,6 +59,7 @@ void AdjacencyManager::socketDataArrived(UdpSocket *socket, Packet *packet)
 {
     // process incoming packet
     handleAdjMgmtMessage(packet);
+    delete packet;
 }
 void AdjacencyManager::socketErrorArrived(UdpSocket *socket, Indication *indication)
 {

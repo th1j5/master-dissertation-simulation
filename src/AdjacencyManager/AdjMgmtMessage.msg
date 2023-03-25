@@ -35,5 +35,6 @@ class AdjMgmtMessage extends inet::FieldsChunk {
     inet::MacAddress sID; // server ID (MAC)
     inet::MacAddress cID; // client hardware address (MAC)
     inet::L3Address assignedLoc;
+    inet::L3Address sLoc; // server Loc (= gateway)
     inet::Ipv4Address subnetMask; //needed because we use IPv4
 }

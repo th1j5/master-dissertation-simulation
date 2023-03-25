@@ -95,9 +95,11 @@ void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
         NetworkInterface* ieOld = chooseInterface(par("oldLocInterface"));
         auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
         auto ipOld = ipv4Data->getIPAddress();
+        ipv4DataOld->setIPAddress(Ipv4Address()); //empty to prevent conflicts in GlobalArp
         auto netmaskOld = ipv4Data->getNetmask();
+        ipv4DataOld->setNetmask(Ipv4Address());
 
-        ipv4Data->setIPAddress(ip.toIpv4());
+        ipv4Data->setIPAddress(ip.toIpv4()); // FIXED: leads to errors when oldIP is still assigned
         ipv4Data->setNetmask(subnetMask);
 
         std::string banner = "Got new Loc " + ip.str();
@@ -112,8 +114,7 @@ void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
     }
 
     seqRcvd = msg->getSeqNumber();
-    EV_DEBUG << "Deleting " << packet << "." << endl;
-    delete packet;
+    EV_DEBUG << "Deleting " << packet << "." << endl; // Delete happens by caller
 }
 
 void AdjacencyManagerClient::openSocket()
