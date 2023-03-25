@@ -27,6 +27,10 @@ void AdjacencyManager::initialize(int stage)
     ApplicationBase::initialize(stage);
 
     if (stage == INITSTAGE_LOCAL) {
+        // TODO: choose better place
+        // disable animations for the toplevel module
+        cModule *network = getSimulation()->getSystemModule();
+        network->setBuiltinAnimationsAllowed(false);
         // UDP ports
         clientPort = 71; // FIXME: does this work?
         serverPort = 70;
