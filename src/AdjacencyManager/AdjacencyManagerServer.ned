@@ -23,5 +23,5 @@ import inet.applications.contract.IApp;
 simple AdjacencyManagerServer extends AdjacencyManager like IApp
 {
     @class(AdjacencyManagerServer);
-    int maxNumClients; // maximum number of clients (IPs) allowed to be leased
+    int maxNumClients = default(-1); // maximum number of clients (IPs) allowed to be leased
 }

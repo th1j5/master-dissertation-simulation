@@ -34,7 +34,7 @@ class AdjacencyManagerServer: public AdjacencyManager {
     typedef std::map<inet::MacAddress, inet::L3Address> LocLeased;
     LocLeased leased;
 
-    unsigned int maxNumOfClients = 0;
+    int maxNumOfClients = 0;
     inet::L3Address locator;
     inet::Ipv4Address subnetMask;
     inet::Ipv4Address ipAddressStart;

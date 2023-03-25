@@ -118,12 +118,16 @@ void AdjacencyManagerServer::handleStartOperation(LifecycleOperation *operation)
 {
     AdjacencyManager::handleStartOperation(operation);
     maxNumOfClients = par("maxNumClients");
+    long numReservedLocs = 2; // hardcode reserved addresses (net + server)
 
     auto ipv4data = ie->getProtocolData<Ipv4InterfaceData>();
     subnetMask = ipv4data->getNetmask();
     uint32_t networkStartAddress = ipv4data->getIPAddress().getInt() & ipv4data->getNetmask().getInt();
     locator = L3Address(ipv4data->getIPAddress());
-    ipAddressStart = Ipv4Address(networkStartAddress + 2); // hardcode reserved addresses
+    ipAddressStart = Ipv4Address(networkStartAddress + numReservedLocs);
+    if (maxNumOfClients == -1) {
+        maxNumOfClients = (~subnetMask.getInt()) - numReservedLocs; //also broadcast
+    }
     if (!Ipv4Address::maskedAddrAreEqual(ipv4data->getIPAddress(), Ipv4Address(ipAddressStart.getInt() + maxNumOfClients - 1), subnetMask))
         throw cRuntimeError("Not enough IP addresses in subnet for %d clients", maxNumOfClients);
 }
