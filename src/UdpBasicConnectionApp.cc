@@ -67,6 +67,7 @@ void UdpBasicConnectionApp::receiveSignal(cComponent *source, simsignal_t signal
             // With DHCP leases, both the IP and Ipv4InterfaceData::F_NETMASK are changed, sequentially after each other
             EV_WARN << "Thijs: Config IPv4 changed signal" << change;
             ie = change->getNetworkInterface();
+            if (strcmp(ie->getInterfaceName(), par("newLocInterface")) != 0) return; // only update for newLocInterface
             // TODO: Check if IP address really changed
             // FIXME: don't send if the address becomes empty
             L3Address newLocator = ie->getNetworkAddress();

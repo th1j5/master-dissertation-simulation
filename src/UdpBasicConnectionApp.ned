@@ -29,4 +29,5 @@ simple UdpBasicConnectionApp extends UdpBasicApp like IApp
         @signal[locatorUpdateReceived](type=inet::Packet);
         @statistic[locatorUpdateSent](title="locUpdates sent"; record=count; interpolationmode=none);
         @statistic[locatorUpdateReceived](title="locUpdates received"; record=count; interpolationmode=none);
+        string newLocInterface = default(""); // which NIC should be listed to for Loc updates
 }
