@@ -30,6 +30,8 @@ void AdjacencyManager::initialize(int stage)
         // UDP ports
         clientPort = 71; // FIXME: does this work?
         serverPort = 70;
+        // get the routing table to update and subscribe it to the blackboard
+        irt.reference(this, "routingTableModule", true);
     }
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
         // get the hostname

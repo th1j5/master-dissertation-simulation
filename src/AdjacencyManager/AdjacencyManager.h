@@ -21,6 +21,7 @@
 #include "inet/applications/base/ApplicationBase.h"
 #include "inet/linklayer/common/MacAddress.h"
 #include "inet/networklayer/common/InterfaceTable.h"
+#include "inet/networklayer/ipv4/Ipv4RoutingTable.h"
 #include "inet/transportlayer/contract/udp/UdpSocket.h"
 
 #include "AdjMgmtMessage_m.h"
@@ -63,7 +64,7 @@ class AdjacencyManager : public inet::ApplicationBase, public cListener, public 
     inet::MacAddress macAddress; // client's MAC address
     cModule *host = nullptr; // containing host module (@networkNode)
     inet::NetworkInterface *ie = nullptr; // interface to configure
-//    ModuleRefByPar<IIpv4RoutingTable> irt; // routing table to update
+    inet::ModuleRefByPar<inet::IIpv4RoutingTable> irt; // routing table to update
 
     // statistics
     int numSent = 0; // number of sent DHCP messages

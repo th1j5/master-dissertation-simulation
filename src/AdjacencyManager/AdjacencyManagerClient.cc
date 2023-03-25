@@ -34,6 +34,24 @@ void AdjacencyManagerClient::initialize(int stage) {
             selfMsg = new cMessage("getLocTimer", SEND);
     }
 }
+namespace {
+static bool routeMatches(const Ipv4Route *entry, const Ipv4Address& target, const Ipv4Address& nmask,
+        const Ipv4Address& gw, int metric, const char *dev)
+{
+    if (!target.equals(entry->getDestination()))
+        return false;
+    if (!nmask.equals(entry->getNetmask()))
+        return false;
+    if (!gw.equals(entry->getGateway()))
+        return false;
+    if (metric && metric != entry->getMetric())
+        return false;
+    if (strcmp(dev, entry->getInterfaceName()))
+        return false;
+
+    return true;
+}
+}
 void AdjacencyManagerClient::handleSelfMessages(cMessage *msg) {
     switch (msg->getKind()) {
     case SEND:
@@ -111,6 +129,24 @@ void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
         ipv4DataOld->setNetmask(netmaskOld);
 
     // TODO: fix routing table
+        Ipv4Route *iroute = nullptr;
+        for (int i = 0; i < irt->getNumRoutes(); i++) {
+            Ipv4Route *e = irt->getRoute(i);
+            if (routeMatches(e, Ipv4Address(), Ipv4Address(), msg->getSLoc().toIpv4(), 0, ie->getInterfaceName())) {
+                iroute = e;
+                break;
+            }
+        }
+        if (iroute == nullptr) {
+            // create gateway route
+            Ipv4Route *route = new Ipv4Route();
+            route->setDestination(Ipv4Address());
+            route->setNetmask(Ipv4Address());
+            route->setGateway(msg->getSLoc().toIpv4());
+            route->setInterface(ie);
+            route->setSourceType(Ipv4Route::MANUAL);
+            irt->addRoute(route);
+        }
     }
 
     seqRcvd = msg->getSeqNumber();
