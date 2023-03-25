@@ -23,6 +23,12 @@ import inet.physicallayer.wireless.common.medium.RadioMedium;
 import inet.physicallayer.wireless.unitdisk.*;
 import inet.visualizer.contract.IIntegratedVisualizer;
 
+channel DelayLink extends ned.DatarateChannel {
+    parameters:
+        datarate = default(1Gbps);
+        delay = default(0.5s);
+}
+
 network Prototype4GWifi
 {
     parameters:
@@ -63,9 +69,9 @@ network Prototype4GWifi
         routersAlongPath[numRoutersAlongPath]: Router;
         users[numUsers]: ManetRouter;
     connections:
-        server.pppg++ <--> {  datarate = 1Gbps; } <--> serverGateway.pppg++;
+        server.pppg++ <--> DelayLink <--> serverGateway.pppg++;
         for i=0..numRoutersAlongPath-1 {
-            serverGateway.pppg++ <--> {  datarate = 1Gbps; } <--> routersAlongPath[i].pppg++;
+            serverGateway.pppg++ <--> DelayLink <--> routersAlongPath[i].pppg++;
         }
         // First connection
         // routersAlongTrack[0].pppg++ <--> {  datarate = 1Gbps; } <--> trainTransceiver.pppg++;
