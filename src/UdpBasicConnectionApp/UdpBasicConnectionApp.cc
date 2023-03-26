@@ -29,6 +29,7 @@ Define_Module(UdpBasicConnectionApp);
 
 simsignal_t locUpdateSentSignal = cComponent::registerSignal("locatorUpdateSent");
 simsignal_t locUpdateRcvdSignal = cComponent::registerSignal("locatorUpdateReceived");
+simsignal_t oldLocRemovedSignal = cComponent::registerSignal("oldLocatorUnreachable");
 
 void UdpBasicConnectionApp::initialize(int stage)
 {
@@ -67,11 +68,17 @@ void UdpBasicConnectionApp::receiveSignal(cComponent *source, simsignal_t signal
             // With DHCP leases, both the IP and Ipv4InterfaceData::F_NETMASK are changed, sequentially after each other
             EV_WARN << "Thijs: Config IPv4 changed signal" << change;
             ie = change->getNetworkInterface();
-            if (strcmp(ie->getInterfaceName(), par("newLocInterface")) != 0) return; // only update for newLocInterface
-            // TODO: Check if IP address really changed
-            // FIXME: don't send if the address becomes empty
-            L3Address newLocator = ie->getNetworkAddress();
-            if (!newLocator.isUnspecified()) sendLocUpdate(newLocator);
+            if (strcmp(ie->getInterfaceName(), par("newLocInterface")) == 0) {
+                // TODO: Check if IP address really changed
+                // FIXME: don't send if the address becomes empty
+                L3Address newLocator = ie->getNetworkAddress();
+                if (!newLocator.isUnspecified()) sendLocUpdate(newLocator);
+            }
+            else if (strcmp(ie->getInterfaceName(), par("oldLocInterface")) == 0) {
+                if(ie->getNetworkAddress().isUnspecified())
+                    emit(oldLocRemovedSignal, true);
+            }
+            else throw cRuntimeError("Client has other interfaces beside new & old Loc");
         }
     }
     else if (signalID == interfaceStateChangedSignal) {
