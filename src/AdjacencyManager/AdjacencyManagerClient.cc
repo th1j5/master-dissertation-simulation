@@ -17,6 +17,8 @@
 
 #include "inet/linklayer/common/InterfaceTag_m.h"
 #include "inet/networklayer/ipv4/Ipv4InterfaceData.h"
+#include "inet/physicallayer/wireless/common/contract/packetlevel/IRadio.h"
+#include "inet/networklayer/common/L3AddressResolver.h"
 
 using namespace inet; // more OK to use in .cc
 
@@ -30,8 +32,9 @@ void AdjacencyManagerClient::initialize(int stage) {
     AdjacencyManager::initialize(stage);
 
     if (stage == INITSTAGE_LOCAL) {
-            // timers
-            selfMsg = new cMessage("getLocTimer", SEND);
+        // timers
+        selfMsg = new cMessage("getLocTimer", SEND);
+        arp.reference(this, "arpModule", true);
     }
 }
 namespace {
@@ -86,6 +89,35 @@ void AdjacencyManagerClient::sendGetLocPacket()
     EV_INFO << "Sending getLoc." << endl;
     sendToUdp(packet, clientPort, Ipv4Address::ALLONES_ADDRESS, serverPort);
     seqSend++;
+    EV_WARN << "Old Loc is reachable: " << checkReachabilityOldLoc() << endl; //FIXME: other place!!
+}
+bool AdjacencyManagerClient::checkReachabilityOldLoc() {
+    NetworkInterface* ie = chooseInterface(par("oldLocInterface"));
+
+    auto mobility = check_and_cast<physicallayer::IRadio *>(ie->getSubmodule("radio"))->getAntenna()->getMobility();
+    auto clientPos = mobility->getCurrentPosition();
+
+    L3Address gatewayLoc(getGateway(ie));
+    if (gatewayLoc.isUnspecified())
+        return false;
+    MacAddress gatewayMAC = arp->resolveL3Address(gatewayLoc, nullptr);
+    auto ieGW = L3AddressResolver().findInterfaceWithMacAddress(gatewayMAC);
+    auto radioGW = check_and_cast<physicallayer::IRadio *>(ieGW->getSubmodule("radio"));
+    auto gatewayPos = radioGW->getAntenna()->getMobility()->getCurrentPosition();
+    auto gatewayRange = radioGW->getTransmitter()->getMaxCommunicationRange();
+
+    auto gateway = L3AddressResolver().findHostWithAddress(gatewayLoc);
+    auto gatewayRadio = gateway->getSubmodule("wlan")->getSubmodule("radio");
+    auto * gatewayMob = check_and_cast<IMobility *>(gateway->getSubmodule("mobility"));
+    auto oldGatewayPos = gatewayMob->getCurrentPosition();
+    return clientPos.distance(gatewayPos) < 90; //FIXME: 90 -> antenna send distance
+}
+Ipv4Address AdjacencyManagerClient::getGateway(NetworkInterface* ie) {
+    // Assumption: gateways is subnet + 1
+    if(ie->getIpv4Address().isUnspecified())
+        return Ipv4Address();
+    auto subnet = ie->getIpv4Address().getInt() & ie->getIpv4Netmask().getInt();
+    return Ipv4Address(subnet+1);
 }
 
 void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {

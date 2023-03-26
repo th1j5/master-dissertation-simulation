@@ -17,9 +17,12 @@
 #define ADJACENCYMANAGER_ADJACENCYMANAGERCLIENT_H_
 
 #include "AdjacencyManager.h"
+#include "inet/networklayer/contract/IArp.h"
 
 class AdjacencyManagerClient: public AdjacencyManager {
 protected:
+    inet::ModuleRefByPar<inet::IArp> arp;
+
     // state
     cMessage *selfMsg = nullptr;
     int seqSend = 0;
@@ -34,6 +37,8 @@ protected:
 
     virtual void processGetLoc();
     virtual void sendGetLocPacket();
+    virtual bool checkReachabilityOldLoc();
+    virtual inet::Ipv4Address getGateway(inet::NetworkInterface* ie);
 
     // Lifecycle methods
     virtual void handleStartOperation(inet::LifecycleOperation *operation) override;

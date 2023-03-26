@@ -24,5 +24,6 @@ simple AdjacencyManagerClient extends AdjacencyManager like IApp
 {
 	parameters:
 	    @class(AdjacencyManagerClient);
+		string arpModule = default("^.ipv4.arp");
         double getLocInterval @unit(s) = default(0.01s);
 }
