@@ -40,6 +40,8 @@ protected:
     virtual bool checkReachabilityOldLoc();
     virtual inet::Ipv4Address getGateway(inet::NetworkInterface* ie);
 
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override;
+
     // Lifecycle methods
     virtual void handleStartOperation(inet::LifecycleOperation *operation) override;
     virtual void handleStopOperation(inet::LifecycleOperation *operation) override;

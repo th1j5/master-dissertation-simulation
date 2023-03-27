@@ -19,6 +19,7 @@
 #include "inet/networklayer/ipv4/Ipv4InterfaceData.h"
 #include "inet/physicallayer/wireless/common/contract/packetlevel/IRadio.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
+#include "inet/mobility/contract/IMobility.h"
 
 using namespace inet; // more OK to use in .cc
 
@@ -26,6 +27,7 @@ Define_Module(AdjacencyManagerClient);
 
 AdjacencyManagerClient::~AdjacencyManagerClient() {
     cancelAndDelete(selfMsg);
+    host->unsubscribe(IMobility::mobilityStateChangedSignal, this);
 }
 
 void AdjacencyManagerClient::initialize(int stage) {
@@ -35,6 +37,9 @@ void AdjacencyManagerClient::initialize(int stage) {
         // timers
         selfMsg = new cMessage("getLocTimer", SEND);
         arp.reference(this, "arpModule", true);
+    }
+    else if (stage == INITSTAGE_APPLICATION_LAYER) {
+        host->subscribe(IMobility::mobilityStateChangedSignal, this);
     }
 }
 namespace {
@@ -89,7 +94,6 @@ void AdjacencyManagerClient::sendGetLocPacket()
     EV_INFO << "Sending getLoc." << endl;
     sendToUdp(packet, clientPort, Ipv4Address::ALLONES_ADDRESS, serverPort);
     seqSend++;
-    EV_WARN << "Old Loc is reachable: " << checkReachabilityOldLoc() << endl; //FIXME: other place!!
 }
 bool AdjacencyManagerClient::checkReachabilityOldLoc() {
     NetworkInterface* ie = chooseInterface(par("oldLocInterface"));
@@ -106,11 +110,7 @@ bool AdjacencyManagerClient::checkReachabilityOldLoc() {
     auto gatewayPos = radioGW->getAntenna()->getMobility()->getCurrentPosition();
     auto gatewayRange = radioGW->getTransmitter()->getMaxCommunicationRange();
 
-    auto gateway = L3AddressResolver().findHostWithAddress(gatewayLoc);
-    auto gatewayRadio = gateway->getSubmodule("wlan")->getSubmodule("radio");
-    auto * gatewayMob = check_and_cast<IMobility *>(gateway->getSubmodule("mobility"));
-    auto oldGatewayPos = gatewayMob->getCurrentPosition();
-    return clientPos.distance(gatewayPos) < 90; //FIXME: 90 -> antenna send distance
+    return (units::values::m) clientPos.distance(gatewayPos) < gatewayRange;
 }
 Ipv4Address AdjacencyManagerClient::getGateway(NetworkInterface* ie) {
     // Assumption: gateways is subnet + 1
@@ -144,11 +144,12 @@ void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
     if (ipv4Data->getIPAddress() != ip.toIpv4()) {
         NetworkInterface* ieOld = chooseInterface(par("oldLocInterface"));
         auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
+        if(!ipv4DataOld->getIPAddress().isUnspecified()) { //assume IP & netmask always configured together
+            ipv4DataOld->setIPAddress(Ipv4Address()); //empty to prevent conflicts in GlobalArp
+            ipv4DataOld->setNetmask(Ipv4Address());
+        }
         auto ipOld = ipv4Data->getIPAddress();
-        ipv4DataOld->setIPAddress(Ipv4Address()); //empty to prevent conflicts in GlobalArp
         auto netmaskOld = ipv4Data->getNetmask();
-        ipv4DataOld->setNetmask(Ipv4Address());
-
         ipv4Data->setIPAddress(ip.toIpv4()); // FIXED: leads to errors when oldIP is still assigned
         ipv4Data->setNetmask(subnetMask);
 
@@ -209,4 +210,19 @@ void AdjacencyManagerClient::handleCrashOperation(LifecycleOperation *operation)
 {
     AdjacencyManager::handleCrashOperation(operation);
     cancelEvent(selfMsg);
+}
+void AdjacencyManagerClient::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) {
+    Enter_Method("%s", cComponent::getSignalName(signalID));
+    if (signalID == IMobility::mobilityStateChangedSignal) {
+        NetworkInterface* ie = chooseInterface(par("oldLocInterface"));
+        if(!ie->getIpv4Address().isUnspecified()) {
+            if(!checkReachabilityOldLoc()) {
+                EV << "Old Loc has become unreachable, deleting" << endl;
+                auto ipv4DataOld = ie->getProtocolDataForUpdate<Ipv4InterfaceData>();
+                ipv4DataOld->setIPAddress(Ipv4Address());
+                ipv4DataOld->setNetmask(Ipv4Address());
+            }
+        }
+    }
+    else throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
 }
