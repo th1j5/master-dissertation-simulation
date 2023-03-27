@@ -25,6 +25,7 @@
 #include "inet/transportlayer/contract/udp/UdpSocket.h"
 
 #include "AdjMgmtMessage_m.h"
+#include "../LocatorUpdatePacket_m.h"
 
 using namespace omnetpp;
 

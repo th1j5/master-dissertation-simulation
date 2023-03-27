@@ -18,7 +18,7 @@
 
 #include <omnetpp.h>
 #include <inet/applications/udpapp/UdpBasicApp.h>
-#include "LocatorUpdatePacket_m.h"
+#include "../LocatorUpdatePacket_m.h"
 
 using namespace omnetpp;
 

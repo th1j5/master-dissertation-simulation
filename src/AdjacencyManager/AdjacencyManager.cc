@@ -105,7 +105,8 @@ void AdjacencyManager::handleCrashOperation(LifecycleOperation *operation)
 NetworkInterface *AdjacencyManager::chooseInterface(const char *interfaceName)
 {
     IInterfaceTable *ift = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
-    if (interfaceName == nullptr) interfaceName = par("newLocInterface");
+    if (interfaceName == nullptr)
+        interfaceName = par("newLocInterface");
     NetworkInterface *ie = nullptr;
 
     if (strlen(interfaceName) > 0) {

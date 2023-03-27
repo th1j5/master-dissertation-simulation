@@ -72,10 +72,11 @@ void UdpBasicConnectionApp::receiveSignal(cComponent *source, simsignal_t signal
                 // TODO: Check if IP address really changed
                 // FIXME: don't send if the address becomes empty
                 L3Address newLocator = ie->getNetworkAddress();
-                if (!newLocator.isUnspecified()) sendLocUpdate(newLocator);
+                if (!newLocator.isUnspecified())
+                    sendLocUpdate(newLocator);
             }
-            else if (strcmp(ie->getInterfaceName(), par("oldLocInterface")) == 0) {
-                if(ie->getNetworkAddress().isUnspecified())
+            else if (strcmp(ie->getInterfaceName(), par("oldLocInterface")) == 0
+                    && ie->getNetworkAddress().isUnspecified()) {
                     emit(oldLocRemovedSignal, true);
             }
             else throw cRuntimeError("Client has other interfaces beside new & old Loc");
@@ -133,8 +134,7 @@ void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc)
     payload->setChunkLength(B(10)); // FIXME: hardcoded
     payload->setSequenceNumber(numSent);
     payload->setSequenceNumLocUpdate(numLocUpdateSend);
-    EV << L3Address();
-    payload->setOldAddress(0); // TODO: update
+    payload->setOldAddress(L3Address()); // TODO: update
     payload->setNewAddress(newLoc);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
     payload->setMultiplexerDestination("flow_allocator");

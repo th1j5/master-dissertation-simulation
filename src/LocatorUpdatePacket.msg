@@ -24,6 +24,6 @@ namespace inet;
 class LocatorUpdatePacket extends MultiplexerPacket {
     // TODO: insert usefull info
     int sequenceNumLocUpdate;
-    int oldAddress;
+    L3Address oldAddress;
     L3Address newAddress;
 }
