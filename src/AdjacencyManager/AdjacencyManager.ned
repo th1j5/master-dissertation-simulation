@@ -27,6 +27,7 @@ simple AdjacencyManager like IApp
         string routingTableModule; // path to the Ipv4RoutingTable module
         string newLocInterface = default(""); // which NIC should be configured (i.e. wlan0, eth1 etc.)
         string oldLocInterface = default(""); // which NIC should be configured (i.e. wlan0, eth1 etc.)
+        string locChangingStrategy = default("end2end"); // Which strategy to use for Loc changes
         double startTime @unit(s) = default(0s); // starting time of DHCP initialization
         @display("i=block/app2");
 //        @lifecycleSupport;

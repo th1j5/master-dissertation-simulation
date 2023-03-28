@@ -20,10 +20,14 @@
 #include "inet/physicallayer/wireless/common/contract/packetlevel/IRadio.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/mobility/contract/IMobility.h"
+#include "inet/networklayer/common/FragmentationTag_m.h"
+#include "inet/common/TimeTag_m.h"
 
 using namespace inet; // more OK to use in .cc
 
 Define_Module(AdjacencyManagerClient);
+simsignal_t neighLocUpdateSentSignal = cComponent::registerSignal("neighLocatorUpdateSent");
+simsignal_t neighLocUpdateRcvdSignal = cComponent::registerSignal("neighLocatorUpdateReceived");
 
 AdjacencyManagerClient::~AdjacencyManagerClient() {
     cancelAndDelete(selfMsg);
@@ -96,12 +100,12 @@ void AdjacencyManagerClient::sendGetLocPacket()
     seqSend++;
 }
 bool AdjacencyManagerClient::checkReachabilityOldLoc() {
-    NetworkInterface* ie = chooseInterface(par("oldLocInterface"));
+    NetworkInterface* ie1 = ieOld;
 
-    auto mobility = check_and_cast<physicallayer::IRadio *>(ie->getSubmodule("radio"))->getAntenna()->getMobility();
+    auto mobility = check_and_cast<physicallayer::IRadio *>(ie1->getSubmodule("radio"))->getAntenna()->getMobility();
     auto clientPos = mobility->getCurrentPosition();
 
-    L3Address gatewayLoc(getGateway(ie));
+    L3Address gatewayLoc = oldLocData.neigh; //(getGateway(ie1));
     if (gatewayLoc.isUnspecified())
         return false;
     MacAddress gatewayMAC = arp->resolveL3Address(gatewayLoc, nullptr);
@@ -141,15 +145,16 @@ void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
     const L3Address& ip = msg->getAssignedLoc();
     const Ipv4Address& subnetMask = msg->getSubnetMask();
 
+    // Update Locator
     if (ipv4Data->getIPAddress() != ip.toIpv4()) {
-        NetworkInterface* ieOld = chooseInterface(par("oldLocInterface"));
         auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
         if(!ipv4DataOld->getIPAddress().isUnspecified()) { //assume IP & netmask always configured together
             ipv4DataOld->setIPAddress(Ipv4Address()); //empty to prevent conflicts in GlobalArp
             ipv4DataOld->setNetmask(Ipv4Address());
         }
-        auto ipOld = ipv4Data->getIPAddress();
-        auto netmaskOld = ipv4Data->getNetmask();
+        oldLocData.loc = ipv4Data->getIPAddress();
+        oldLocData.netmask = ipv4Data->getNetmask();
+        oldLocData.neigh = getGateway(ie);
         ipv4Data->setIPAddress(ip.toIpv4()); // FIXED: leads to errors when oldIP is still assigned
         ipv4Data->setNetmask(subnetMask);
 
@@ -158,8 +163,16 @@ void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
 
         EV_INFO << host->getFullName() << " got the following Loc assigned: "
                 << ip << "/" << subnetMask << "." << endl;
-        ipv4DataOld->setIPAddress(ipOld);
-        ipv4DataOld->setNetmask(netmaskOld);
+        if (!oldLocData.loc.isUnspecified()) {
+            ipv4DataOld->setIPAddress(oldLocData.loc.toIpv4());
+            ipv4DataOld->setNetmask(oldLocData.netmask);
+            if (strcasecmp(par("locChangingStrategy"), "TTR") == 0)
+                sendNeighLocUpdate(ip, oldLocData.loc, oldLocData.neigh);
+            else if (strcasecmp(par("locChangingStrategy"), "ID") == 0)
+                /* sendNeighLocUpdate, with ID's */;
+            else if (strcasecmp(par("locChangingStrategy"), "end2end") != 0)
+                throw cRuntimeError("Unrecognized locator changing strategy");
+        }
 
     // TODO: fix routing table
         Ipv4Route *iroute = nullptr;
@@ -197,32 +210,53 @@ void AdjacencyManagerClient::handleStartOperation(LifecycleOperation *operation)
     AdjacencyManager::handleStartOperation(operation);
 
     simtime_t start = simTime(); // std::max(startTime
+    ieOld = chooseInterface(par("oldLocInterface"));
     scheduleAt(start, selfMsg);
 }
 
 void AdjacencyManagerClient::handleStopOperation(LifecycleOperation *operation)
 {
     AdjacencyManager::handleStopOperation(operation);
+    ieOld = nullptr;
     cancelEvent(selfMsg);
 }
 
 void AdjacencyManagerClient::handleCrashOperation(LifecycleOperation *operation)
 {
     AdjacencyManager::handleCrashOperation(operation);
+    ieOld = nullptr;
     cancelEvent(selfMsg);
 }
 void AdjacencyManagerClient::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) {
     Enter_Method("%s", cComponent::getSignalName(signalID));
     if (signalID == IMobility::mobilityStateChangedSignal) {
-        NetworkInterface* ie = chooseInterface(par("oldLocInterface"));
-        if(!ie->getIpv4Address().isUnspecified()) {
+        if(!ieOld->getIpv4Address().isUnspecified()) {
             if(!checkReachabilityOldLoc()) {
                 EV << "Old Loc has become unreachable, deleting" << endl;
-                auto ipv4DataOld = ie->getProtocolDataForUpdate<Ipv4InterfaceData>();
+                auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
                 ipv4DataOld->setIPAddress(Ipv4Address());
                 ipv4DataOld->setNetmask(Ipv4Address());
             }
         }
     }
     else throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
+}
+
+void AdjacencyManagerClient::sendNeighLocUpdate(L3Address newLoc, L3Address oldLoc, L3Address neigh)
+{
+    std::ostringstream str;
+    str << locUpdateName << "-" << numLocUpdateSend;
+    Packet *packet = new Packet(str.str().c_str());
+    packet->addTag<FragmentationReq>()->setDontFragment(true); //dontFragment
+    const auto& payload = makeShared<LocatorUpdatePacket>();
+    payload->setChunkLength(B(10)); // FIXME: hardcoded
+    payload->setSequenceNumber(numSent);
+    payload->setSequenceNumLocUpdate(numLocUpdateSend);
+    payload->setOldAddress(oldLoc);
+    payload->setNewAddress(newLoc);
+    payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
+    packet->insertAtBack(payload);
+    emit(neighLocUpdateSentSignal, packet);
+    socket.sendTo(packet, neigh, serverPort);
+    numLocUpdateSend++;
 }

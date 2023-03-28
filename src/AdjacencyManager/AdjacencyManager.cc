@@ -64,7 +64,16 @@ void AdjacencyManager::handleMessageWhenUp(cMessage *msg)
 void AdjacencyManager::socketDataArrived(UdpSocket *socket, Packet *packet)
 {
     // process incoming packet
-    handleAdjMgmtMessage(packet);
+    auto data = packet->peekData<MultiplexerPacket>();
+    auto multiplexerDest = data->getMultiplexerDestination();
+    if (strcasecmp(multiplexerDest, "adj_mgmt") == 0) {
+        handleAdjMgmtMessage(packet);
+    }
+    else if (strcasecmp(multiplexerDest, "flow_allocator") == 0) {
+        handleNeighMessage(packet);
+    }
+    else
+        throw cRuntimeError("unrecognized multiplexer destination");
     delete packet;
 }
 void AdjacencyManager::socketErrorArrived(UdpSocket *socket, Indication *indication)

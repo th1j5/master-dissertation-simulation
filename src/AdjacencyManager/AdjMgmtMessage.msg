@@ -18,6 +18,7 @@ import inet.common.packet.chunk.Chunk;
 import inet.networklayer.common.L3Address;
 import inet.networklayer.contract.ipv4.Ipv4Address;
 import inet.linklayer.common.MacAddress;
+import MultiplexerPacket;
 
 //
 // Adjacency Managment Message
@@ -29,7 +30,9 @@ enum AdjMgmtOpcode
     LOCREPLY = 2;
 }
 
-class AdjMgmtMessage extends inet::FieldsChunk {
+class AdjMgmtMessage extends MultiplexerPacket
+{
+    multiplexerDestination = "adj_mgmt";
     AdjMgmtOpcode op;
     int seqNumber;
     inet::MacAddress sID; // server ID (MAC)

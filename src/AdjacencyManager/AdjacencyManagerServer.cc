@@ -55,6 +55,21 @@ void AdjacencyManagerServer::handleAdjMgmtMessage(inet::Packet *packet) {
     numReceived++;
 }
 
+void AdjacencyManagerServer::handleNeighMessage(inet::Packet *pk) {
+    // adjust routing table + rerouting mechanisms
+    // Warn Ttr...
+    // TODO: Do we need a timer?? see mechanism 3
+    //const auto& msg = pk->peekAtFront<LocatorUpdatePacket>();
+    //    Ipv4Route *reroute = new Ipv4Route();
+    //    reroute->setDestination(msg->getOldAddress());
+    //    reroute->setNetmask(Ipv4Address::ALLONES_ADDRESS);
+    //    reroute->setGateway(Ipv4Address::LOOPBACK_ADDRESS);
+    //    reroute->setInterface(chooseInterface("lo0"));
+    //    reroute->setSourceType(IRoute::MANUAL);
+    //    irt->addRoute(reroute);
+    // TODO
+}
+
 L3Address AdjacencyManagerServer::assignLoc(MacAddress clientID) {
     auto * loc = getLocByID(clientID);
     if (loc)

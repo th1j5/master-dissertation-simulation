@@ -82,6 +82,7 @@ class AdjacencyManager : public inet::ApplicationBase, public cListener, public 
     virtual void openSocket() = 0;                                  // Opens a UDP socket for client-server communication.
     virtual void handleSelfMessages(cMessage *msg) = 0;
     virtual void handleAdjMgmtMessage(inet::Packet *packet) = 0;
+    virtual void handleNeighMessage(inet::Packet *packet) = 0;
 
     virtual void sendToUdp(inet::Packet *msg, int srcPort, const inet::L3Address& destAddr, int destPort);
 //    virtual inet::NetworkInterface *chooseInterface();

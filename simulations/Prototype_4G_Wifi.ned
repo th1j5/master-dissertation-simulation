@@ -26,7 +26,7 @@ import inet.visualizer.contract.IIntegratedVisualizer;
 channel DelayLink extends ned.DatarateChannel {
     parameters:
         datarate = default(1Gbps);
-        delay = default(0.5s);
+        delay = default(0.1s);
 }
 
 network Prototype4GWifi

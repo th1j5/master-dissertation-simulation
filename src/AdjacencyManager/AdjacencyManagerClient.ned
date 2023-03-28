@@ -24,6 +24,8 @@ simple AdjacencyManagerClient extends AdjacencyManager like IApp
 {
 	parameters:
 	    @class(AdjacencyManagerClient);
+	    @signal[neighLocatorUpdateSent](type=inet::Packet);
+	    @signal[neighLocatorUpdateReceived](type=inet::Packet);
 		string arpModule = default("^.ipv4.arp");
         double getLocInterval @unit(s) = default(0.01s);
 }

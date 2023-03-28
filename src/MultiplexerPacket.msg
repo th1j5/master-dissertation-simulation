@@ -17,10 +17,7 @@ import inet.common.INETDefs;
 import inet.applications.base.ApplicationPacket;
 import inet.networklayer.common.L3Address;
 
-// namespace prototype;
-namespace inet;
-
-class MultiplexerPacket extends ApplicationPacket {
+class MultiplexerPacket extends inet::ApplicationPacket {
     // TODO: insert usefull info
     string multiplexerDestination;
 }

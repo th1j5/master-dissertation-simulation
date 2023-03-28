@@ -75,8 +75,8 @@ void UdpBasicConnectionApp::receiveSignal(cComponent *source, simsignal_t signal
                 if (!newLocator.isUnspecified())
                     sendLocUpdate(newLocator);
             }
-            else if (strcmp(ie->getInterfaceName(), par("oldLocInterface")) == 0
-                    && ie->getNetworkAddress().isUnspecified()) {
+            else if (strcmp(ie->getInterfaceName(), par("oldLocInterface")) == 0) {
+                if (ie->getNetworkAddress().isUnspecified())
                     emit(oldLocRemovedSignal, true);
             }
             else throw cRuntimeError("Client has other interfaces beside new & old Loc");
@@ -137,7 +137,6 @@ void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc)
     payload->setOldAddress(L3Address()); // TODO: update
     payload->setNewAddress(newLoc);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
-    payload->setMultiplexerDestination("flow_allocator");
     packet->insertAtBack(payload);
     if (destAddresses.empty()) throw cRuntimeError("No peer to send the update to...");
     L3Address destAddr = chooseDestAddr();

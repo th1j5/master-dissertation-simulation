@@ -44,6 +44,7 @@ class AdjacencyManagerServer: public AdjacencyManager {
 
     virtual void handleSelfMessages(cMessage *msg) override;
     virtual void handleAdjMgmtMessage(inet::Packet *packet) override;
+    virtual void handleNeighMessage(inet::Packet *pk) override;
     virtual void openSocket() override;
 
     virtual inet::L3Address assignLoc(inet::MacAddress clientID);

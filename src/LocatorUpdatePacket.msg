@@ -18,12 +18,10 @@ import inet.applications.base.ApplicationPacket;
 import inet.networklayer.common.L3Address;
 import MultiplexerPacket;
 
-// namespace prototype;
-namespace inet;
-
 class LocatorUpdatePacket extends MultiplexerPacket {
+    multiplexerDestination = "flow_allocator";
     // TODO: insert usefull info
     int sequenceNumLocUpdate;
-    L3Address oldAddress;
-    L3Address newAddress;
+    inet::L3Address oldAddress;
+    inet::L3Address newAddress;
 }
