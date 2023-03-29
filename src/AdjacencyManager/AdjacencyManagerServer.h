@@ -18,6 +18,7 @@
 
 #include <map>
 #include "AdjacencyManager.h"
+#include "../TTR/Ttr.h"
 
 class AdjacencyManagerServer: public AdjacencyManager {
   private:
@@ -33,6 +34,7 @@ class AdjacencyManagerServer: public AdjacencyManager {
   protected:
     typedef std::map<inet::MacAddress, inet::L3Address> LocLeased;
     LocLeased leased;
+    inet::ModuleRefByPar<Ttr> ttr; // TTR table to update
 
     int maxNumOfClients = 0;
     inet::L3Address locator;

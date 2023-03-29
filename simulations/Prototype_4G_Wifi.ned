@@ -23,6 +23,18 @@ import inet.physicallayer.wireless.common.medium.RadioMedium;
 import inet.physicallayer.wireless.unitdisk.*;
 import inet.visualizer.contract.IIntegratedVisualizer;
 
+import inet.networklayer.ipv4.*;
+import prototype.TTR.Ttr;
+
+module TtrIpv4NetworkLayer extends Ipv4NetworkLayer {
+    parameters:
+        string locChangingStrategy;
+    submodules:
+        ttrTable: Ttr if locChangingStrategy == "TTR" {
+            @display("p=100,400;is=s");
+        }
+}
+
 channel DelayLink extends ned.DatarateChannel {
     parameters:
         datarate = default(1Gbps);
@@ -32,6 +44,7 @@ channel DelayLink extends ned.DatarateChannel {
 network Prototype4GWifi
 {
     parameters:
+        **.ipv4.typename = "TtrIpv4NetworkLayer";
         int numUsers;
         int numRoutersAlongPath;
         @display("bgb=400,400;bgg=100,1,grey95");

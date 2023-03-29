@@ -29,6 +29,9 @@ AdjacencyManagerServer::~AdjacencyManagerServer() {
 
 void AdjacencyManagerServer::initialize(int stage) {
     AdjacencyManager::initialize(stage);
+    if (stage == INITSTAGE_LOCAL) {
+        ttr.reference(this, "transientTriangularRoutingModule", true); // false, when tested
+    }
     WATCH_MAP(leased);
 }
 void AdjacencyManagerServer::handleSelfMessages(cMessage *msg) {
@@ -58,15 +61,10 @@ void AdjacencyManagerServer::handleAdjMgmtMessage(inet::Packet *packet) {
 void AdjacencyManagerServer::handleNeighMessage(inet::Packet *pk) {
     // adjust routing table + rerouting mechanisms
     // Warn Ttr...
-    // TODO: Do we need a timer?? see mechanism 3
-    //const auto& msg = pk->peekAtFront<LocatorUpdatePacket>();
-    //    Ipv4Route *reroute = new Ipv4Route();
-    //    reroute->setDestination(msg->getOldAddress());
-    //    reroute->setNetmask(Ipv4Address::ALLONES_ADDRESS);
-    //    reroute->setGateway(Ipv4Address::LOOPBACK_ADDRESS);
-    //    reroute->setInterface(chooseInterface("lo0"));
-    //    reroute->setSourceType(IRoute::MANUAL);
-    //    irt->addRoute(reroute);
+    if (ttr != nullptr) {
+        const auto& msg = pk->peekAtFront<LocatorUpdatePacket>();
+        ttr->addTTREntry(msg->getNewAddress(), msg->getOldAddress());
+    }
     // TODO
 }
 

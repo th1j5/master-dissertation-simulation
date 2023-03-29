@@ -13,16 +13,15 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-package prototype.AdjacencyManager;
-
-import inet.applications.contract.IApp;
+package prototype.TTR;
 
 //
-// TODO auto-generated module
+// Transient Triangular Routing
+// Reroutes in-flight packets (by rewriting the destination)
 //
-simple AdjacencyManagerServer extends AdjacencyManager like IApp
+simple Ttr
 {
-    @class(AdjacencyManagerServer);
-    string transientTriangularRoutingModule = default("^.ipv4.ttrTable");
-    int maxNumClients = default(-1); // maximum number of clients (IPs) allowed to be leased
+    parameters:
+        @display("i=block/table");
+    	string networkProtocolModule = default("^.ip");
 }
