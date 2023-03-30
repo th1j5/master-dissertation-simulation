@@ -31,7 +31,8 @@ simsignal_t neighLocUpdateRcvdSignal = cComponent::registerSignal("neighLocatorU
 
 AdjacencyManagerClient::~AdjacencyManagerClient() {
     cancelAndDelete(selfMsg);
-    host->unsubscribe(IMobility::mobilityStateChangedSignal, this);
+    if (host->isSubscribed(IMobility::mobilityStateChangedSignal, this))
+        host->unsubscribe(IMobility::mobilityStateChangedSignal, this);
 }
 
 void AdjacencyManagerClient::initialize(int stage) {

@@ -30,7 +30,7 @@ AdjacencyManagerServer::~AdjacencyManagerServer() {
 void AdjacencyManagerServer::initialize(int stage) {
     AdjacencyManager::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
-        ttr.reference(this, "transientTriangularRoutingModule", true); // false, when tested
+        ttr.reference(this, "transientTriangularRoutingModule", false); // false, when tested
     }
     WATCH_MAP(leased);
 }
