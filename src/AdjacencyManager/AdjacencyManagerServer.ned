@@ -23,6 +23,8 @@ import inet.applications.contract.IApp;
 simple AdjacencyManagerServer extends AdjacencyManager like IApp
 {
     @class(AdjacencyManagerServer);
+    @signal[neighLocatorUpdateReceived](type=inet::Packet);
+    @statistic[neighLocatorUpdateReceived](title="locUpdates received";record=vector(locUpdateCorrelation); interpolationmode=none);
     string transientTriangularRoutingModule = default("^.ipv4.ttrTable");
     int maxNumClients = default(-1); // maximum number of clients (IPs) allowed to be leased
 }

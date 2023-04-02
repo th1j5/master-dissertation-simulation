@@ -27,7 +27,6 @@ using namespace inet; // more OK to use in .cc
 
 Define_Module(AdjacencyManagerClient);
 simsignal_t neighLocUpdateSentSignal = cComponent::registerSignal("neighLocatorUpdateSent");
-simsignal_t neighLocUpdateRcvdSignal = cComponent::registerSignal("neighLocatorUpdateReceived");
 
 AdjacencyManagerClient::~AdjacencyManagerClient() {
     cancelAndDelete(selfMsg);
@@ -253,6 +252,7 @@ void AdjacencyManagerClient::sendNeighLocUpdate(L3Address newLoc, L3Address oldL
     payload->setChunkLength(B(10)); // FIXME: hardcoded
     payload->setSequenceNumber(numSent);
     payload->setSequenceNumLocUpdate(numLocUpdateSend);
+    payload->setLocUpdateCorrelationID((((int64_t)host->getId())<<32) | ((int64_t)numLocUpdates));
     payload->setOldAddress(oldLoc);
     payload->setNewAddress(newLoc);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());

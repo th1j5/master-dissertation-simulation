@@ -22,6 +22,7 @@
 using namespace inet; // more OK to use in .cc
 
 Define_Module(AdjacencyManagerServer);
+simsignal_t neighLocUpdateRcvdSignal = cComponent::registerSignal("neighLocatorUpdateReceived");
 
 AdjacencyManagerServer::~AdjacencyManagerServer() {
     // TODO Auto-generated destructor stub
@@ -65,6 +66,7 @@ void AdjacencyManagerServer::handleNeighMessage(inet::Packet *pk) {
         const auto& msg = pk->peekAtFront<LocatorUpdatePacket>();
         ttr->addTTREntry(msg->getNewAddress(), msg->getOldAddress());
     }
+    emit(neighLocUpdateRcvdSignal, pk);
     // TODO
 }
 

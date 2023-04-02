@@ -21,6 +21,8 @@ import MultiplexerPacket;
 class LocatorUpdatePacket extends MultiplexerPacket {
     multiplexerDestination = "flow_allocator";
     // TODO: insert usefull info
+    // client ID + seq number of loc Update, to correlate all update events
+    double locUpdateCorrelationID;
     int sequenceNumLocUpdate;
     inet::L3Address oldAddress;
     inet::L3Address newAddress;
