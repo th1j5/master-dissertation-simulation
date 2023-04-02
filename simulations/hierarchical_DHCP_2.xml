@@ -1,0 +1,40 @@
+<config>
+	<interface hosts='server' address='10.1.1.x' netmask='255.255.255.x' />
+	<!-- <interface hosts='serverGateway' towards='server' address='10.1.1.x' netmask='255.255.255.x'/> -->
+	<interface hosts='backbone' towards='mobileTower[*]' address='10.x.x.x' netmask='255.255.255.x'/>
+	<interface hosts='backbone' towards='streetCabin' address='10.x.x.x' netmask='255.255.255.x'/>
+	<interface hosts="backbone" towards="server" address="10.x.x.x" netmask="255.255.255.x"/> <!-- add automatically other subnet interfaces to routers -->
+	<interface hosts='streetCabin' towards='backbone' address='10.x.x.x' netmask='255.255.255.x'/>
+	<interface hosts='streetCabin' towards='homes[*]' address='10.2.1.x' netmask='255.255.255.x'/>
+	<interface hosts="mobileTower[*]" names="ppp0" address="10.x.x.x" netmask="255.255.255.x"/> <!-- add automatically other subnet interfaces to routers -->
+	<interface hosts="mobileTower[0]" names="wlan0" address="10.3.2.1" netmask="255.255.255.0"/>
+	<interface hosts="mobileTower[1]" names="wlan0" address="10.3.3.1" netmask="255.255.255.0"/>
+	<interface hosts="homes[*]" names="ppp0" address="10.x.x.x" netmask="255.255.255.x"/> <!-- add automatically other subnet interfaces to routers -->
+	<interface hosts='homes[0]' names="wlan0" address='10.2.2.1' netmask='255.255.255.0' />
+	<interface hosts='homes[1]' names="wlan0" address='10.2.3.1' netmask='255.255.255.0' />
+	<interface hosts='homes[2]' names="wlan0" address='10.2.4.1' netmask='255.255.255.0' />
+	<interface hosts='homes[3]' names="wlan0" address='10.2.5.1' netmask='255.255.255.0' />
+<!-- 	<interface hosts='homes[4]' names="wlan0" address='10.2.6.1' netmask='255.255.255.0' />
+ -->	<!-- <autoroute metric="errorRate"/> means that a static route is added, through which it becomes impossible to send packets to other routers, even with mobility (in static case) -->
+	<autoroute destinationInterfaces="ppp*" />
+	<!-- doesn't work, because only /32 routes are added this way <autoroute sourceHosts="**" destinationInterfaces="routersAlongPath[*].*"/> -->
+	<!-- <route hosts='users[*]' destination='*' interface="wlan0" metric='2' /> -->
+	<!-- <autoroute sourceHosts="users[*]" /> this works!-->
+	
+	<route hosts="streetCabin" destination='*' gateway='backbone' />
+	<route hosts="homes[*]" destination='*' gateway='streetCabin' />
+	<route hosts="mobileTower[*]" destination='*' gateway='backbone' />
+	<route hosts="streetCabin" destination="homes[0]%wlan0" netmask="255.255.255.0" gateway="homes[0]"/>
+	<route hosts="streetCabin" destination="homes[1]%wlan0" netmask="255.255.255.0" gateway="homes[1]"/>
+	<route hosts="streetCabin" destination="homes[2]%wlan0" netmask="255.255.255.0" gateway="homes[2]"/>
+	<route hosts="streetCabin" destination="homes[3]%wlan0" netmask="255.255.255.0" gateway="homes[3]"/>
+	<route hosts="backbone" destination="10.2.0.0" netmask="255.255.0.0" gateway="streetCabin"/>
+	<route hosts="backbone" destination="mobileTower[0]%wlan0" netmask="255.255.255.0" gateway="mobileTower[0]"/>
+	<route hosts="backbone" destination="mobileTower[1]%wlan0" netmask="255.255.255.0" gateway="mobileTower[1]"/>
+<!-- 	<route hosts="streetCabin" destination="homes[4]%wlan0" netmask="255.255.255.0" gateway="homes[4]"/>
+ -->	<!-- <route hosts='routersAlongPath[0]' destination="routersAlongPath[0]%wlan0" netmask="255.255.255.240" gateway="*" interface="wlan0"/> metric="0"
+	<route hosts='routersAlongPath[1]' destination="routersAlongPath[1]/" netmask="255.255.255.240" gateway="*" interface="wlan0"/> metric="0"
+	<route hosts='routersAlongPath[2]' destination="routersAlongPath[2]/" netmask="255.255.255.240" gateway="*" interface="wlan0"/> metric="0"
+	<route hosts='routersAlongPath[3]' destination="routersAlongPath[3]/" netmask="255.255.255.240" gateway="*" interface="wlan0"/> metric="0"
+	<route hosts='routersAlongPath[4]' destination="routersAlongPath[4]/" netmask="255.255.255.240" gateway="*" interface="wlan0"/> metric="0" -->
+</config>

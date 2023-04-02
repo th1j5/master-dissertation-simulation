@@ -17,23 +17,16 @@ package prototype.simulations;
 
 import inet.node.inet.*;
 import inet.node.ethernet.*;
-import inet.networklayer.configurator.ipv4.*;
-import inet.networklayer.configurator.nexthop.*;
-import inet.physicallayer.wireless.common.medium.RadioMedium;
-import inet.physicallayer.wireless.unitdisk.*;
-import inet.visualizer.contract.IIntegratedVisualizer;
 
 import prototype.TTR.TtrIpv4NetworkLayer;
 import prototype.DelayLink;
 import prototype.LocNodes.*;
 
-network Prototype4GWifi
+network Wifi_4G extends basic_network
 {
     parameters:
-        **.ipv4.typename = "TtrIpv4NetworkLayer";
         int numUsers;
-        int numRoutersAlongPath;
-        @display("bgb=400,400;bgg=100,1,grey95");
+        int numHomes;
 
         @figure[title](type=label; pos=0,-1; anchor=sw; color=darkblue);
 
@@ -43,35 +36,25 @@ network Prototype4GWifi
         @figure[rcvdLocUpdText](type=indicatorText; pos=310,40; anchor=w; font=,5; textFormat="Loc updates received by server (by user?): %g"; initialValue=0);
         @statistic[packetReceived](source=users[0].app[0].packetReceived; record=figure(count); targetFigure=rcvdPkText);
         @statistic[packetSent](source=server.app[0].packetSent; record=figure(count); targetFigure=sentPkText);
-		@statistic[locUpdSent](source=users[0].app[0].locatorUpdateSent; record=figure(count); targetFigure=sentLocUpdText);
-		@statistic[locUpdRcvd](source=server.app[0].locatorUpdateReceived; record=figure(count); targetFigure=rcvdLocUpdText);
+        @statistic[locUpdSent](source=users[0].app[0].locatorUpdateSent; record=figure(count); targetFigure=sentLocUpdText);
+        @statistic[locUpdRcvd](source=server.app[0].locatorUpdateReceived; record=figure(count); targetFigure=rcvdLocUpdText);
     submodules:
-        visualizer: <default(firstAvailableOrEmpty("IntegratedCanvasVisualizer"))> like IIntegratedVisualizer if typename != "" {
-            @display("p=15,35");
-        }
-        configurator: Ipv4NetworkConfigurator {
-            @display("p=15,15");
-        }
-        radioMedium: UnitDiskRadioMedium {
-            @display("p=15,55");
-        }
-
-        server: RoutingNode {
+        server: Router {
             parameters:
                 @display("p=301,20;i=device/server2");
-                // Hardcoded params
-                //forwarding = false;
-                hasOspf = true;
-                hasUdp = true;
         }
-        serverGateway: RoutingNode;
-        routersAlongPath[numRoutersAlongPath]: RoutingNode;
+        backbone: RoutingNode;
+        streetCabin: RoutingNode;
+        homes[numHomes]: RoutingNode;
+        mobileTower[2]: RoutingNode;
         users[numUsers]: MobileNode;
     connections:
-        server.pppg++ <--> DelayLink <--> serverGateway.pppg++;
-        for i=0..numRoutersAlongPath-1 {
-            serverGateway.pppg++ <--> DelayLink <--> routersAlongPath[i].pppg++;
+        server.pppg++ <--> DelayLink <--> backbone.pppg++;
+        backbone.pppg++ <--> DelayLink <--> streetCabin.pppg++;
+        for i=0..numHomes-1 {
+            streetCabin.pppg++ <--> DelayLink <--> homes[i].pppg++;
         }
-        // First connection
-        // routersAlongTrack[0].pppg++ <--> {  datarate = 1Gbps; } <--> trainTransceiver.pppg++;
+        for i=0..2-1 {
+            backbone.pppg++ <--> DelayLink <--> mobileTower[i].pppg++;
+        }
 }
