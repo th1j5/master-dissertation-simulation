@@ -22,6 +22,7 @@
 #include "inet/networklayer//ipv4/Ipv4InterfaceData.h"
 #include "inet/queueing/common/LabelsTag_m.h" // Alternative: inet/common/FlowTag.msg
 // #include "inet/InterfaceTableAccess.h"
+#include "AdjacencyManager/AdjacencyManagerClient.h"
 
 using namespace inet;
 
@@ -36,10 +37,13 @@ void UdpBasicConnectionApp::initialize(int stage)
     UdpBasicApp::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
         host = getContainingNode(this);
+        adjMgmt.reference(this, "adjacencyMgmt", false);
     }
 }
 void UdpBasicConnectionApp::processStart() {
     UdpBasicApp::processStart();
+    if (destAddresses.size() > 1)
+        throw cRuntimeError("We cannot handle more than 1 communicating entity per app instantiation");
     if (!destAddresses.empty()) {
         host->subscribe(interfaceConfigChangedSignal, this);
         host->subscribe(interfaceIpv4ConfigChangedSignal, this);
@@ -125,15 +129,18 @@ void UdpBasicConnectionApp::sendPacket()
 
 void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc)
 {
+    int numLocUpdates = dynamic_cast<AdjacencyManagerClient *>(adjMgmt.get())->getNumLocUpdates();
     std::ostringstream str;
-    str << locUpdateName << "-" << numLocUpdateSend;
+    str << locUpdateName << "-" << numLocUpdates;
     Packet *packet = new Packet(str.str().c_str());
     if (dontFragment)
         packet->addTag<FragmentationReq>()->setDontFragment(true);
     const auto& payload = makeShared<LocatorUpdatePacket>();
     payload->setChunkLength(B(10)); // FIXME: hardcoded
     payload->setSequenceNumber(numSent);
-    payload->setSequenceNumLocUpdate(numLocUpdateSend);
+    payload->setSequenceNumLocUpdate(numLocUpdates);
+    // FIXME: mostly works, not necessarily (https://stackoverflow.com/questions/10749419/encode-multiple-ints-into-a-double)
+    payload->setLocUpdateCorrelationID((((int64_t)host->getId())<<32) | ((int64_t)numLocUpdates));
     payload->setOldAddress(L3Address()); // TODO: update
     payload->setNewAddress(newLoc);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());

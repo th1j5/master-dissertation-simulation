@@ -35,4 +35,5 @@ simple UdpBasicConnectionApp extends UdpBasicApp
         @statistic[oldLocatorUnreachable](title="old locator becomes unreachable";record=vector; interpolationmode=none;);
         string newLocInterface = default(""); // which NIC should be listed to for Loc updates
         string oldLocInterface = default(""); // NIC to listen to for unreachability of old Loc
+        string adjacencyMgmt;
 }

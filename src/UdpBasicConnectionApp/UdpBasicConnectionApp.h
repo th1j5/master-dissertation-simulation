@@ -18,7 +18,8 @@
 
 #include <omnetpp.h>
 #include <inet/applications/udpapp/UdpBasicApp.h>
-#include "../LocatorUpdatePacket_m.h"
+#include "LocatorUpdatePacket_m.h"
+#include "AdjacencyManager/AdjacencyManager.h"
 
 using namespace omnetpp;
 
@@ -29,6 +30,8 @@ private:
 protected:
     // parameters
     const char * const locUpdateName = "LocUpdate";
+    inet::ModuleRefByPar<AdjacencyManager> adjMgmt;
+
     // statistics
     int numLocUpdateSend = 0;
     int numLocUpdateReceived = 0;

@@ -27,6 +27,7 @@ protected:
     //parameters
     const char * const locUpdateName = "neighLocUpdate";
     // statistics
+    int numLocUpdates = 0;
     int numLocUpdateSend = 0;
 
     // state
@@ -64,6 +65,7 @@ protected:
   public:
     AdjacencyManagerClient() {}
     virtual ~AdjacencyManagerClient();
+    int getNumLocUpdates() {return numLocUpdates;};
 };
 
 #endif /* ADJACENCYMANAGER_ADJACENCYMANAGERCLIENT_H_ */

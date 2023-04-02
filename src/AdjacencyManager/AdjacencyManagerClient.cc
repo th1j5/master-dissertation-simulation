@@ -193,6 +193,7 @@ void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
             route->setSourceType(Ipv4Route::MANUAL);
             irt->addRoute(route);
         }
+        numLocUpdates++;
     }
 
     seqRcvd = msg->getSeqNumber();
@@ -245,13 +246,13 @@ void AdjacencyManagerClient::receiveSignal(cComponent *source, simsignal_t signa
 void AdjacencyManagerClient::sendNeighLocUpdate(L3Address newLoc, L3Address oldLoc, L3Address neigh)
 {
     std::ostringstream str;
-    str << locUpdateName << "-" << numLocUpdateSend;
+    str << locUpdateName << "-" << numLocUpdates;
     Packet *packet = new Packet(str.str().c_str());
     packet->addTag<FragmentationReq>()->setDontFragment(true); //dontFragment
     const auto& payload = makeShared<LocatorUpdatePacket>();
     payload->setChunkLength(B(10)); // FIXME: hardcoded
     payload->setSequenceNumber(numSent);
-    payload->setSequenceNumLocUpdate(numLocUpdateSend);
+    payload->setSequenceNumLocUpdate(numLocUpdates);
     payload->setLocUpdateCorrelationID((((int64_t)host->getId())<<32) | ((int64_t)numLocUpdates));
     payload->setOldAddress(oldLoc);
     payload->setNewAddress(newLoc);
@@ -259,5 +260,7 @@ void AdjacencyManagerClient::sendNeighLocUpdate(L3Address newLoc, L3Address oldL
     packet->insertAtBack(payload);
     emit(neighLocUpdateSentSignal, packet);
     socket.sendTo(packet, neigh, serverPort);
+    ASSERT(numLocUpdateSend+1 == numLocUpdates);
     numLocUpdateSend++;
+
 }

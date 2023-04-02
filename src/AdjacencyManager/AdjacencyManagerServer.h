@@ -18,7 +18,7 @@
 
 #include <map>
 #include "AdjacencyManager.h"
-#include "../TTR/Ttr.h"
+#include "TTR/Ttr.h"
 
 class AdjacencyManagerServer: public AdjacencyManager {
   private:
