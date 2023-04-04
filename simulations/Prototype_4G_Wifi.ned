@@ -45,7 +45,6 @@ network Prototype4GWifi
         @statistic[packetSent](source=server.app[0].packetSent; record=figure(count); targetFigure=sentPkText);
         @statistic[locUpdSent](source=users[0].app[0].locatorUpdateSent; record=figure(count); targetFigure=sentLocUpdText);
         @statistic[locUpdRcvd](source=server.app[0].locatorUpdateReceived; record=figure(count); targetFigure=rcvdLocUpdText);
-        @statistic[locChanges](source=users[0].interfaceTable.interfaceIpv4ConfigChanged; title="loc changes"; record=vector(constant1); interpolationmode=none);
     submodules:
         visualizer: <default(firstAvailableOrEmpty("IntegratedCanvasVisualizer"))> like IIntegratedVisualizer if typename != "" {
             @display("p=15,35");
