@@ -43,8 +43,9 @@ network Prototype4GWifi
         @figure[rcvdLocUpdText](type=indicatorText; pos=310,40; anchor=w; font=,5; textFormat="Loc updates received by server (by user?): %g"; initialValue=0);
         @statistic[packetReceived](source=users[0].app[0].packetReceived; record=figure(count); targetFigure=rcvdPkText);
         @statistic[packetSent](source=server.app[0].packetSent; record=figure(count); targetFigure=sentPkText);
-		@statistic[locUpdSent](source=users[0].app[0].locatorUpdateSent; record=figure(count); targetFigure=sentLocUpdText);
-		@statistic[locUpdRcvd](source=server.app[0].locatorUpdateReceived; record=figure(count); targetFigure=rcvdLocUpdText);
+        @statistic[locUpdSent](source=users[0].app[0].locatorUpdateSent; record=figure(count); targetFigure=sentLocUpdText);
+        @statistic[locUpdRcvd](source=server.app[0].locatorUpdateReceived; record=figure(count); targetFigure=rcvdLocUpdText);
+        @statistic[locChanges](source=users[0].interfaceTable.interfaceIpv4ConfigChanged; title="loc changes"; record=vector(constant1); interpolationmode=none);
     submodules:
         visualizer: <default(firstAvailableOrEmpty("IntegratedCanvasVisualizer"))> like IIntegratedVisualizer if typename != "" {
             @display("p=15,35");
@@ -65,7 +66,12 @@ network Prototype4GWifi
                 hasUdp = true;
         }
         serverGateway: RoutingNode;
-        routersAlongPath[numRoutersAlongPath]: RoutingNode;
+        routersAlongPath[numRoutersAlongPath]: RoutingNode {
+            parameters:
+                // TODO fix filter on UDPData packets
+                // ??? https://inet.omnetpp.org/docs/users-guide/ch-packetfilter.html
+                @statistic[endToEndDelayLost](title="end-to-end delay lost packets"; source="dataAge(packetDropped)"; unit=s; record=histogram,vector; interpolationmode=none);
+        }
         users[numUsers]: MobileNode;
     connections:
         server.pppg++ <--> DelayLink <--> serverGateway.pppg++;
