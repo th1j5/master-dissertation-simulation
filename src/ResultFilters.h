@@ -18,6 +18,8 @@ using namespace omnetpp;
 class LocUpdatesFilter: public cObjectResultFilter {
   public:
     virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, intval_t l, cObject *details) override;
+    virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, double d, cObject *details) override;
 };
 
 #endif /* RESULTFILTERS_H_ */
