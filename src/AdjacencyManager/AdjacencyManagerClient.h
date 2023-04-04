@@ -20,6 +20,8 @@
 #include "inet/networklayer/contract/IArp.h"
 
 class AdjacencyManagerClient: public AdjacencyManager {
+public:
+    static simsignal_t newLocAssignedSignal;
 protected:
     inet::ModuleRefByPar<inet::IArp> arp;
     inet::NetworkInterface *ieOld = nullptr; // interface to configure
@@ -27,7 +29,7 @@ protected:
     //parameters
     const char * const locUpdateName = "neighLocUpdate";
     // statistics
-    int numLocUpdates = 0;
+    int numLocUpdates = -1; // First send is 0
     int numLocUpdateSend = 0;
 
     // state
@@ -39,7 +41,10 @@ protected:
         inet::Ipv4Address netmask{};
         inet::L3Address neigh{}; // neighbours of the old Locator (at the moment just 1)
     } oldLocData;
-
+    struct ip_netmask {
+        inet::Ipv4Address ip;
+        inet::Ipv4Address netmask;
+    };
 
   protected:
     virtual void initialize(int stage) override;
@@ -49,9 +54,12 @@ protected:
     virtual void handleNeighMessage(inet::Packet *pk) override {}; // don't participate in neigh messages
     virtual void openSocket() override;
 
+    virtual bool isFilteredMessage(const inet::Ptr<const AdjMgmtMessage> & msg);
     virtual void processGetLoc();
     virtual void sendGetLocPacket();
-    virtual bool checkReachabilityOldLoc();
+    virtual bool isLocReachable(inet::NetworkInterface* ie1);
+    virtual void assignNewLoc(ip_netmask ip_net);
+    virtual void removeOldLoc();
     virtual inet::Ipv4Address getGateway(inet::NetworkInterface* ie);
     virtual void sendNeighLocUpdate(inet::L3Address newLoc, inet::L3Address oldLoc, inet::L3Address neigh);
 
@@ -65,6 +73,7 @@ protected:
   public:
     AdjacencyManagerClient() {}
     virtual ~AdjacencyManagerClient();
+    double getCorrID(int numLocUpdates) {return (((int64_t)host->getId())<<32) | ((int64_t)numLocUpdates);};
     int getNumLocUpdates() {return numLocUpdates;};
 };
 

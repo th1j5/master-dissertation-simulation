@@ -30,7 +30,6 @@ Define_Module(UdpBasicConnectionApp);
 
 simsignal_t locUpdateSentSignal = cComponent::registerSignal("locatorUpdateSent");
 simsignal_t locUpdateRcvdSignal = cComponent::registerSignal("locatorUpdateReceived");
-simsignal_t oldLocRemovedSignal = cComponent::registerSignal("oldLocatorUnreachable");
 
 void UdpBasicConnectionApp::initialize(int stage)
 {
@@ -45,49 +44,26 @@ void UdpBasicConnectionApp::processStart() {
     if (destAddresses.size() > 1)
         throw cRuntimeError("We cannot handle more than 1 communicating entity per app instantiation");
     if (!destAddresses.empty()) {
-        host->subscribe(interfaceConfigChangedSignal, this);
-        host->subscribe(interfaceIpv4ConfigChangedSignal, this);
-        host->subscribe(interfaceStateChangedSignal, this);
+        host->subscribe(AdjacencyManagerClient::newLocAssignedSignal, this);
     } // only subscribe (=sending LocUpdates) if it has corresponding node
 };
 void UdpBasicConnectionApp::processStop() {
     UdpBasicApp::processStop();
     // assume unsubscribing doesn't error if not really subscribed...
-    host->unsubscribe(interfaceConfigChangedSignal, this);
-    host->unsubscribe(interfaceIpv4ConfigChangedSignal, this);
-    host->unsubscribe(interfaceStateChangedSignal, this);
+    host->unsubscribe(AdjacencyManagerClient::newLocAssignedSignal, this);
 };
-void UdpBasicConnectionApp::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) {
+void UdpBasicConnectionApp::receiveSignal(cComponent *source, simsignal_t signalID, intval_t numLocUpdates, cObject *details) {
     Enter_Method("%s", cComponent::getSignalName(signalID));
-
     const NetworkInterface *ie;
-    const NetworkInterfaceChangeDetails *change;
 
-    // interfaceStateChangedSignal
-    // interfaceConfigChangedSignal
-    if (signalID == interfaceIpv4ConfigChangedSignal) {
-        change = check_and_cast<const NetworkInterfaceChangeDetails *>(obj);
-        auto fieldId = change->getFieldId();
-        if(fieldId == Ipv4InterfaceData::F_IP_ADDRESS) {
-            // With DHCP leases, both the IP and Ipv4InterfaceData::F_NETMASK are changed, sequentially after each other
-            EV_WARN << "Thijs: Config IPv4 changed signal" << change;
-            ie = change->getNetworkInterface();
-            if (strcmp(ie->getInterfaceName(), par("newLocInterface")) == 0) {
-                // TODO: Check if IP address really changed
-                // FIXME: don't send if the address becomes empty
-                L3Address newLocator = ie->getNetworkAddress();
-                if (!newLocator.isUnspecified())
-                    sendLocUpdate(newLocator);
-            }
-            else if (strcmp(ie->getInterfaceName(), par("oldLocInterface")) == 0) {
-                if (ie->getNetworkAddress().isUnspecified())
-                    emit(oldLocRemovedSignal, true);
-            }
-            else throw cRuntimeError("Client has other interfaces beside new & old Loc");
-        }
-    }
-    else if (signalID == interfaceStateChangedSignal) {
-        // Ignore
+    if (signalID == AdjacencyManagerClient::newLocAssignedSignal) {
+        ie = check_and_cast<const NetworkInterface *>(details);
+        if (strcmp(ie->getInterfaceName(), par("newLocInterface")) != 0)
+            throw cRuntimeError("new Loc Assigned signal is assigned to other interface than newLocInterface");
+        L3Address newLocator = ie->getNetworkAddress();
+        if (newLocator.isUnspecified())
+            throw cRuntimeError("new Loc is unspecified");
+        sendLocUpdate(newLocator, numLocUpdates);
     }
     else
         throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
@@ -127,9 +103,9 @@ void UdpBasicConnectionApp::sendPacket()
     numSent++;
 }
 
-void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc)
+void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc, int numLocUpdates)
 {
-    int numLocUpdates = dynamic_cast<AdjacencyManagerClient *>(adjMgmt.get())->getNumLocUpdates();
+    double corrID = dynamic_cast<AdjacencyManagerClient *>(adjMgmt.get())->getCorrID(numLocUpdates);
     std::ostringstream str;
     str << locUpdateName << "-" << numLocUpdates;
     Packet *packet = new Packet(str.str().c_str());
@@ -140,7 +116,7 @@ void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc)
     payload->setSequenceNumber(numSent);
     payload->setSequenceNumLocUpdate(numLocUpdates);
     // FIXME: mostly works, not necessarily (https://stackoverflow.com/questions/10749419/encode-multiple-ints-into-a-double)
-    payload->setLocUpdateCorrelationID((((int64_t)host->getId())<<32) | ((int64_t)numLocUpdates));
+    payload->setLocUpdateCorrelationID(corrID);
     payload->setOldAddress(L3Address()); // TODO: update
     payload->setNewAddress(newLoc);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());

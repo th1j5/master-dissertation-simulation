@@ -41,10 +41,10 @@ protected:
     virtual void initialize(int stage) override;
     virtual void processStart() override;
     virtual void processStop() override;
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, inet::intval_t numLocUpdates, cObject *details) override;
 
     virtual void sendPacket() override; // only add tag
-    void sendLocUpdate(inet::L3Address newLoc);
+    void sendLocUpdate(inet::L3Address newLoc, int numLocUpdates);
     virtual void processPacket(inet::Packet *pk) override;
 
 public:

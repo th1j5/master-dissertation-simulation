@@ -27,12 +27,10 @@ simple UdpBasicConnectionApp extends UdpBasicApp
         @class(UdpBasicConnectionApp);
         @signal[locatorUpdateSent](type=inet::Packet);
         @signal[locatorUpdateReceived](type=inet::Packet);
-        @signal[oldLocatorUnreachable](type=bool);
         @statistic[locatorUpdateSent](title="locUpdates sent"; record=count,vector(locUpdateCorrelation); interpolationmode=none);
         @statistic[locatorUpdateReceived](title="locUpdates received"; record=count,vector(locUpdateCorrelation); interpolationmode=none);
         @statistic[endToEndDelay](title="end-to-end delay"; source="dataAge(packetReceived)"; unit=s; record=histogram,vector; interpolationmode=none);
         @statistic[packetJitter](title="packet jitter"; source="jitter(dataAge(packetReceived))"; unit=s; record=histogram,vector; interpolationmode=none);
-        @statistic[oldLocatorUnreachable](title="old locator becomes unreachable";record=vector; interpolationmode=none;);
         string newLocInterface = default(""); // which NIC should be listed to for Loc updates
         string oldLocInterface = default(""); // NIC to listen to for unreachability of old Loc
         string adjacencyMgmt;

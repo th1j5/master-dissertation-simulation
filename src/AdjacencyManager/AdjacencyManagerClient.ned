@@ -22,10 +22,13 @@ import inet.applications.contract.IApp;
 //
 simple AdjacencyManagerClient extends AdjacencyManager like IApp
 {
-	parameters:
-	    @class(AdjacencyManagerClient);
-	    @signal[neighLocatorUpdateSent](type=inet::Packet);
-	    @signal[neighLocatorUpdateReceived](type=inet::Packet);
-		string arpModule = default("^.ipv4.arp");
+    parameters:
+        @class(AdjacencyManagerClient);
+        @signal[neighLocatorUpdateSent](type=inet::Packet);
+        @signal[oldLocatorUnreachable](type=int); // int numLocUpdates
+        @signal[newLocatorAssigned](type=int); // int numLocUpdates
+        @statistic[oldLocatorUnreachable](title="old locator becomes unreachable";record=vector(locUpdateCorrelation); interpolationmode=none;);
+        @statistic[newLocatorAssigned](title="new locator assigned";record=vector(locUpdateCorrelation); interpolationmode=none;);
+        string arpModule = default("^.ipv4.arp");
         double getLocInterval @unit(s) = default(0.01s);
 }

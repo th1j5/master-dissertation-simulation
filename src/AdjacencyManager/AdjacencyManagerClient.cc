@@ -27,6 +27,8 @@ using namespace inet; // more OK to use in .cc
 
 Define_Module(AdjacencyManagerClient);
 simsignal_t neighLocUpdateSentSignal = cComponent::registerSignal("neighLocatorUpdateSent");
+simsignal_t oldLocRemovedSignal = cComponent::registerSignal("oldLocatorUnreachable");
+simsignal_t AdjacencyManagerClient::newLocAssignedSignal = cComponent::registerSignal("newLocatorAssigned");
 
 AdjacencyManagerClient::~AdjacencyManagerClient() {
     cancelAndDelete(selfMsg);
@@ -99,13 +101,14 @@ void AdjacencyManagerClient::sendGetLocPacket()
     sendToUdp(packet, clientPort, Ipv4Address::ALLONES_ADDRESS, serverPort);
     seqSend++;
 }
-bool AdjacencyManagerClient::checkReachabilityOldLoc() {
-    NetworkInterface* ie1 = ieOld;
 
+// Checks all links to determine if the flows to this locator are still working
+bool AdjacencyManagerClient::isLocReachable(NetworkInterface* ie1) {
     auto mobility = check_and_cast<physicallayer::IRadio *>(ie1->getSubmodule("radio"))->getAntenna()->getMobility();
     auto clientPos = mobility->getCurrentPosition();
 
-    L3Address gatewayLoc = oldLocData.neigh; //(getGateway(ie1));
+    // All link enpoint nodes (special case: only 1, namely the 'gateway')
+    L3Address gatewayLoc = getGateway(ie1);
     if (gatewayLoc.isUnspecified())
         return false;
     MacAddress gatewayMAC = arp->resolveL3Address(gatewayLoc, nullptr);
@@ -124,57 +127,46 @@ Ipv4Address AdjacencyManagerClient::getGateway(NetworkInterface* ie) {
     return Ipv4Address(subnet+1);
 }
 
-void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
-    // Handles incoming LocAssignment messages
-    const auto& msg = packet->peekAtFront<AdjMgmtMessage>();
+bool AdjacencyManagerClient::isFilteredMessage(const Ptr<const AdjMgmtMessage> & msg) {
     if (msg->getOp() != LOCREPLY) {
         EV_WARN << "Client received a non-LOCREPLY message, dropping." << endl;
-        return;
+        return true;
     }
     ASSERT(msg->getSeqNumber() <= seqSend);
     if (msg->getSeqNumber() <= seqRcvd) {
         EV_WARN << "Message sequence number is not recent enough, dropping." << endl;
-        return;
+        return true;
     }
     if (msg->getCID() != macAddress) {
         EV_WARN << "Loc update not intended for this client, dropping." << endl;
-        return;
+        return true;
     }
+    return false;
+}
+
+void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
+    // Handles incoming LocAssignment messages
+    const auto& msg = packet->peekAtFront<AdjMgmtMessage>();
+    if (isFilteredMessage(msg))
+        return;
+
     // assign Loc
+    const Ipv4Address& ip = msg->getAssignedLoc().toIpv4();
     auto ipv4Data = ie->getProtocolDataForUpdate<Ipv4InterfaceData>();
-    const L3Address& ip = msg->getAssignedLoc();
-    const Ipv4Address& subnetMask = msg->getSubnetMask();
 
-    // Update Locator
-    if (ipv4Data->getIPAddress() != ip.toIpv4()) {
-        auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
-        if(!ipv4DataOld->getIPAddress().isUnspecified()) { //assume IP & netmask always configured together
-            ipv4DataOld->setIPAddress(Ipv4Address()); //empty to prevent conflicts in GlobalArp
-            ipv4DataOld->setNetmask(Ipv4Address());
-        }
-        oldLocData.loc = ipv4Data->getIPAddress();
-        oldLocData.netmask = ipv4Data->getNetmask();
-        oldLocData.neigh = getGateway(ie);
-        ipv4Data->setIPAddress(ip.toIpv4()); // FIXED: leads to errors when oldIP is still assigned
-        ipv4Data->setNetmask(subnetMask);
+    // Decision to Update Locator to new locator
+    if (ipv4Data->getIPAddress() != ip) {
+        assignNewLoc(ip_netmask{ip, msg->getSubnetMask()});
 
-        std::string banner = "Got new Loc " + ip.str();
-        host->bubble(banner.c_str());
+        // In network mechanisms
+        if (strcasecmp(par("locChangingStrategy"), "TTR") == 0)
+            sendNeighLocUpdate(L3Address(ip), oldLocData.loc, oldLocData.neigh);
+        else if (strcasecmp(par("locChangingStrategy"), "ID") == 0)
+            /* sendNeighLocUpdate, with ID's */;
+        else if (strcasecmp(par("locChangingStrategy"), "end2end") != 0)
+            throw cRuntimeError("Unrecognized locator changing strategy");
 
-        EV_INFO << host->getFullName() << " got the following Loc assigned: "
-                << ip << "/" << subnetMask << "." << endl;
-        if (!oldLocData.loc.isUnspecified()) {
-            ipv4DataOld->setIPAddress(oldLocData.loc.toIpv4());
-            ipv4DataOld->setNetmask(oldLocData.netmask);
-            if (strcasecmp(par("locChangingStrategy"), "TTR") == 0)
-                sendNeighLocUpdate(ip, oldLocData.loc, oldLocData.neigh);
-            else if (strcasecmp(par("locChangingStrategy"), "ID") == 0)
-                /* sendNeighLocUpdate, with ID's */;
-            else if (strcasecmp(par("locChangingStrategy"), "end2end") != 0)
-                throw cRuntimeError("Unrecognized locator changing strategy");
-        }
-
-    // TODO: fix routing table
+        // TODO: fix routing table
         Ipv4Route *iroute = nullptr;
         for (int i = 0; i < irt->getNumRoutes(); i++) {
             Ipv4Route *e = irt->getRoute(i);
@@ -193,7 +185,6 @@ void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
             route->setSourceType(Ipv4Route::MANUAL);
             irt->addRoute(route);
         }
-        numLocUpdates++;
     }
 
     seqRcvd = msg->getSeqNumber();
@@ -231,20 +222,65 @@ void AdjacencyManagerClient::handleCrashOperation(LifecycleOperation *operation)
 void AdjacencyManagerClient::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) {
     Enter_Method("%s", cComponent::getSignalName(signalID));
     if (signalID == IMobility::mobilityStateChangedSignal) {
-        if(!ieOld->getIpv4Address().isUnspecified()) {
-            if(!checkReachabilityOldLoc()) {
-                EV << "Old Loc has become unreachable, deleting" << endl;
-                auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
-                ipv4DataOld->setIPAddress(Ipv4Address());
-                ipv4DataOld->setNetmask(Ipv4Address());
-            }
+        // make decisions to adjust graph
+        if (!isLocReachable(ieOld)) {
+            EV << "Old Loc has become unreachable" << endl;
+            removeOldLoc();
+        }
+        if (!isLocReachable(ie)) {
+            // Decide to keep at least 1 loc (although it is unreachable)
+            // But for metrics, it is interesting to know when this became unreachable,
+            // thus use next corrID (because the next update lies in the future)
+            emit(oldLocRemovedSignal, numLocUpdates+1);
         }
     }
     else throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
 }
+void AdjacencyManagerClient::assignNewLoc(ip_netmask ip_net) {
+    const Ipv4Address& ip = ip_net.ip;
+    const Ipv4Address& subnetMask = ip_net.netmask;
+    //empty to prevent conflicts in GlobalArp
+    removeOldLoc(); // oldOld loc
+
+    numLocUpdates++; // tactically placed such that all future calls to removeOldLoc will have the same corrID as the corrID which is send by newLocAssignedSignal
+
+    // saveOldLoc();
+    auto ipv4Data = ie->getProtocolDataForUpdate<Ipv4InterfaceData>();
+    oldLocData.loc = ipv4Data->getIPAddress();
+    oldLocData.netmask = ipv4Data->getNetmask();
+    oldLocData.neigh = getGateway(ie);
+    // assignNewLoc();
+    ASSERT(!ip.isUnspecified());
+    ASSERT(ip != oldLocData.loc.toIpv4());
+    ipv4Data->setIPAddress(ip);
+    ipv4Data->setNetmask(subnetMask);
+    emit(newLocAssignedSignal, numLocUpdates, ie);
+    // info
+    std::string banner = "Got new Loc " + ip.str();
+    host->bubble(banner.c_str());
+    EV_INFO << host->getFullName() << " got the following Loc assigned: "
+            << ip << "/" << subnetMask << "." << endl;
+    // restoreOldLoc();
+    auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
+    if (!oldLocData.loc.isUnspecified()) {
+        ipv4DataOld->setIPAddress(oldLocData.loc.toIpv4());
+        ipv4DataOld->setNetmask(oldLocData.netmask);
+    }
+}
+void AdjacencyManagerClient::removeOldLoc() {
+    auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
+    if(!ipv4DataOld->getIPAddress().isUnspecified()) { //assume IP & netmask always configured together
+        EV_WARN << "Deleting old Loc" << endl;
+        ipv4DataOld->setIPAddress(Ipv4Address());
+        ipv4DataOld->setNetmask(Ipv4Address());
+        emit(oldLocRemovedSignal, numLocUpdates);
+    }
+}
 
 void AdjacencyManagerClient::sendNeighLocUpdate(L3Address newLoc, L3Address oldLoc, L3Address neigh)
 {
+    if (oldLoc.isUnspecified())
+        return;
     std::ostringstream str;
     str << locUpdateName << "-" << numLocUpdates;
     Packet *packet = new Packet(str.str().c_str());
@@ -253,7 +289,7 @@ void AdjacencyManagerClient::sendNeighLocUpdate(L3Address newLoc, L3Address oldL
     payload->setChunkLength(B(10)); // FIXME: hardcoded
     payload->setSequenceNumber(numSent);
     payload->setSequenceNumLocUpdate(numLocUpdates);
-    payload->setLocUpdateCorrelationID((((int64_t)host->getId())<<32) | ((int64_t)numLocUpdates));
+    payload->setLocUpdateCorrelationID(getCorrID(numLocUpdates));
     payload->setOldAddress(oldLoc);
     payload->setNewAddress(newLoc);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
