@@ -17,6 +17,8 @@
 
 #include "inet/networklayer/ipv4/Ipv4Header_m.h"
 #include "inet/networklayer/common/L3Tools.h"
+#include "inet/transportlayer/udp/UdpHeader_m.h"
+#include "MultiplexerPacket_m.h"
 
 using namespace inet; // more OK to use in .cc
 

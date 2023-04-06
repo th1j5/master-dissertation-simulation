@@ -20,4 +20,8 @@ import inet.networklayer.common.L3Address;
 class MultiplexerPacket extends inet::ApplicationPacket {
     // TODO: insert usefull info
     string multiplexerDestination;
+    // client ID + seq number of loc Update, to correlate all update events
+    // If in LocatorUpdatePacket, it is the corrID from the sender
+    // If in MultiplexerPacket, it is the corrID known at that moment, from the receiver
+    double locUpdateCorrelationID = -1;
 }

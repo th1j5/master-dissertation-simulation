@@ -40,6 +40,7 @@ void UdpBasicConnectionApp::initialize(int stage)
     }
 }
 void UdpBasicConnectionApp::processStart() {
+    corrID_MN = std::vector<double>(1, -1.0); // processStart already sends a packet... FIXME
     UdpBasicApp::processStart();
     if (destAddresses.size() > 1)
         throw cRuntimeError("We cannot handle more than 1 communicating entity per app instantiation");
@@ -96,8 +97,10 @@ void UdpBasicConnectionApp::sendPacket()
     payload->setSequenceNumber(numSent);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
     payload->setMultiplexerDestination("app");
-    packet->insertAtBack(payload);
     L3Address destAddr = chooseDestAddr();
+    double corrID = corrID_MN[0];
+    payload->setLocUpdateCorrelationID(corrID);
+    packet->insertAtBack(payload);
     emit(packetSentSignal, packet);
     socket.sendTo(packet, destAddr, destPort);
     numSent++;
@@ -134,7 +137,7 @@ void UdpBasicConnectionApp::processPacket(Packet *pk)
     auto data = pk->peekData<MultiplexerPacket>();
     auto multiplexerDest = data->getMultiplexerDestination();
     if (strcasecmp(multiplexerDest, "app") == 0) {
-        emit(packetReceivedSignal, pk);
+        emit(packetReceivedSignal, pk); // Data packet
         numReceived++;
     }
     else if (strcasecmp(multiplexerDest, "flow_allocator") == 0) {
@@ -143,6 +146,7 @@ void UdpBasicConnectionApp::processPacket(Packet *pk)
         // FIXME: update destination location (brittle)
         auto locUpdateData = pk->peekData<LocatorUpdatePacket>();
         destAddresses[0] = locUpdateData->getNewAddress();
+        corrID_MN[0] = locUpdateData->getLocUpdateCorrelationID();
     }
     else {
         throw cRuntimeError("unrecognized multiplexer destination");
