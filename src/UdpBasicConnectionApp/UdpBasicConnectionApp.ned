@@ -30,6 +30,7 @@ simple UdpBasicConnectionApp extends UdpBasicApp
         @statistic[locatorUpdateSent](title="locUpdates sent"; record=count,vector(locUpdateCorrelation); interpolationmode=none);
         @statistic[locatorUpdateReceived](title="locUpdates received"; record=count,vector(locUpdateCorrelation); interpolationmode=none);
         @statistic[corrIDTag](title="corrID for tags"; source="locUpdateCorrelation(packetReceived)"; record=vector; interpolationmode=none);
+        @statistic[reroutedTag](title="is packet rerouted"; source="rerouted(packetReceived)"; record=vector; interpolationmode=none);
         @statistic[endToEndDelay](title="end-to-end delay"; source="dataAge(packetReceived)"; unit=s; record=histogram,vector; interpolationmode=none);
         @statistic[packetJitter](title="packet jitter"; source="jitter(dataAge(packetReceived))"; unit=s; record=histogram,vector; interpolationmode=none);
         string newLocInterface = default(""); // which NIC should be listed to for Loc updates

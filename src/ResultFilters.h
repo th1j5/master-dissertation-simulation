@@ -22,4 +22,9 @@ class LocUpdatesFilter: public cObjectResultFilter {
     virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, double d, cObject *details) override;
 };
 
+class ReroutedFilter: public cObjectResultFilter {
+  public:
+    virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
+};
+
 #endif /* RESULTFILTERS_H_ */

@@ -40,6 +40,7 @@ void Ttr::initialize(int stage)
     }
 }
 
+std::function< void(const Ptr< MultiplexerPacket > &)> f_increaseReroute = increaseReroute;
 INetfilter::IHook::Result Ttr::datagramPreRoutingHook(Packet *datagram) {
     //put logic to reroute in flight here
 //    pk->peekAtFront<Ipv4Header>().; // TODO optimise (peek for address, only remove when needed)
@@ -48,6 +49,10 @@ INetfilter::IHook::Result Ttr::datagramPreRoutingHook(Packet *datagram) {
     auto rerouteEntry = ttrEntries.find(oldLoc);
     if (rerouteEntry != ttrEntries.end()) {
         ipv4Header->setDestinationAddress(rerouteEntry->second);
+        // reroute++
+        auto& header = datagram->peekAtFront<UdpHeader>();
+        b offset = header->getChunkLength(); // start from the beginning
+        datagram->updateDataAt<MultiplexerPacket>(f_increaseReroute, offset);
         // FIXME: make sure to recognize re-routed packets
     }
     insertNetworkProtocolHeader(datagram, Protocol::ipv4, ipv4Header);

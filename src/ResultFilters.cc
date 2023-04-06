@@ -35,3 +35,12 @@ void LocUpdatesFilter::receiveSignal(cComponent *source, simsignal_t signalID, i
     else
         cResultFilter::receiveSignal(source, signalID, numLocUpdates, details);
 }
+
+Register_ResultFilter("rerouted", ReroutedFilter);
+void ReroutedFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
+    if (auto packet = dynamic_cast<Packet *>(object)) {
+        if (auto multiplexPacket = dynamicPtrCast<const MultiplexerPacket>(packet->peekAtFront())) {
+            fire(this, t, (intval_t) multiplexPacket->getRerouted(), details);
+        }
+    }
+}

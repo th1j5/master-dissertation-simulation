@@ -17,6 +17,17 @@ import inet.common.INETDefs;
 import inet.applications.base.ApplicationPacket;
 import inet.networklayer.common.L3Address;
 
+cplusplus(h) {{
+    void increaseReroute(const inet::Ptr<MultiplexerPacket> & multiplexPacket);
+}}
+cplusplus(cc) {{
+void increaseReroute(const inet::Ptr<MultiplexerPacket> & multiplexPacket) {
+    int i = multiplexPacket->getRerouted();
+    i++;
+    multiplexPacket->setRerouted(i);
+}
+}}
+
 class MultiplexerPacket extends inet::ApplicationPacket {
     // TODO: insert usefull info
     string multiplexerDestination;
@@ -24,4 +35,5 @@ class MultiplexerPacket extends inet::ApplicationPacket {
     // If in LocatorUpdatePacket, it is the corrID from the sender
     // If in MultiplexerPacket, it is the corrID known at that moment, from the receiver
     double locUpdateCorrelationID = -1;
+    int rerouted = 0; // How many times is this packet re-routed in flight?
 }
