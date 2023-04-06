@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import pandas as pd
 from omnetpp.scave import results, chart, utils
 
 def process(props):
@@ -23,20 +24,144 @@ def process(props):
     print(df["vectime"][0])
     print(df.info())
     print(df.to_csv()) # df = pd.read_clipboard(sep=',')
+
+    gather_data(df)
+    #slow_gather_data(df)
+
+    # apply vector operations
+    df = utils.perform_vector_ops(df, props["vector_operations"])
+    return df
+
 ############### experiment ###########
+def gather_data(df):
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> start gather data <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
     # 1 row voor elke MN
-    sendRows = df.loc[df["name"].str.contains("newLocatorAssigned:vector")].reset_index(drop=True)
+    newLocRows = df.loc[df["name"].str.contains("newLocatorAssigned:vector")].reset_index(drop=True)
     locRemoveRows = df.loc[df["name"].str.contains("oldLocatorUnreachable:vector")].reset_index(drop=True)
     neighRows = df.loc[df["name"].str.contains("neighLocatorUpdateReceived:vector")].reset_index(drop=True)
     # meerdere rows voor elke server per client
     rcvdRows = df.loc[df["name"].str.contains("locatorUpdateReceived:vector")].reset_index(drop=True)
-    end2endDelayRows = df.loc[df["name"].str.contains("endToEndDelay:vector")].reset_index(drop=True)
+    pktDelayRows = df.loc[df["name"].str.contains("endToEndDelay:vector")].reset_index(drop=True)
+    pktCorrIDRows = df.loc[df["name"].str.contains("corrIDTag:vector")].reset_index(drop=True)
+    pktReroutedRows = df.loc[df["name"].str.contains("reroutedTag:vector")].reset_index(drop=True)
+    print(f"{newLocRows['vecvalue'].iloc[0]=}")
+    print(f"{rcvdRows['vecvalue'].iloc[0]=}")
+    if not newLocRows["vecvalue"].eq(rcvdRows["vecvalue"]).all():
+        print("There is a mismatch between newLoc and rcvdRows") # assume only 1 MN and 1 CN
+        newLocRows.iloc[0]["vectime"]  = newLocRows.iloc[0]["vectime"][:-1]
+        newLocRows.iloc[0]["vecvalue"] = newLocRows.iloc[0]["vecvalue"][:-1]
+        pd.testing.assert_series_equal(newLocRows["vecvalue"], rcvdRows["vecvalue"])
+    if not newLocRows["vecvalue"].eq(locRemoveRows["vecvalue"]).all():
+        pass
+#        print("There is a mismatch between newLoc and locRemoveRows") # assume only 1 MN and 1 CN
+#        locRemoveRows["vecvalue"].iloc[0] = locRemoveRows["vecvalue"].iloc[0][:-1]
+#        pd.testing.assert_series_equal(newLocRows["vecvalue"], rcvdRows["vecvalue"])
+    assert pktDelayRows["vectime"].equals(pktCorrIDRows["vectime"])
+    assert pktDelayRows["vectime"].equals(pktReroutedRows["vectime"])
+    assert np.all([np.all(MN<=1) for MN in pktReroutedRows["vecvalue"]]), "damn, you got packets which rerouted more than once!"
 
-    sendRows[["vectime","vecvalue"]]
-    time = sendRows["vectime"]
+    time = newLocRows["vectime"]
     # dimensions
-    numMN = sendRows.shape[0] # Mobile Nodes
-    numLocUpdates = sendRows["vectime"].apply(np.size) # Series
+    numMN = newLocRows.shape[0] # Mobile Nodes
+    numLocUpdates = newLocRows["vectime"].apply(np.size) # Series
+    numCN = np.nan # Corresponding Nodes (for each LocUpdate)
+    # data structures
+    # FIXME: assumption: only 1 neigh or CN
+    dim = (numMN, np.max(numLocUpdates))
+    timeOldLocRemove = np.empty(dim)
+    timeCNUpdate = np.empty(dim)
+    timeNNUpdate = np.empty(dim)
+    lossTime = np.empty(dim)
+    reroutingTime = np.empty(dim)
+    delay = np.empty((3, *dim)) # before, during, after
+    timeOldLocRemove[:] = np.nan
+    timeCNUpdate[:] = np.nan
+    timeNNUpdate[:] = np.nan
+    lossTime[:] = np.nan
+    reroutingTime[:] = np.nan
+    delay[:] = np.nan
+
+    for MN_i, (MN, MN_old, CN, pktCorrID, pktRR, pktDelay) in enumerate(
+    zip(newLocRows.itertuples(), locRemoveRows.itertuples(), rcvdRows.itertuples(), pktCorrIDRows.itertuples(), pktReroutedRows.itertuples(), pktDelayRows.itertuples())):
+        corrIDs = MN.vecvalue
+        #### locRemove
+        corrMatrix = MN_old.vecvalue == corrIDs[:,np.newaxis]
+        # ASSUMPTION: there is always at least one true value (see usage argmax)
+        if np.any(corrMatrix.sum(axis=1) != 1):
+            print(f"Warning: oldLocatorUnreachable has {corrMatrix.sum(axis=1)=}, this probably means that it was unreachable for an amount of time")
+            print(f"Check correct behaviour of this case")
+            # FIXME: check on rebound off wall how losstime is calculated
+        # should be earliest, thus 'left' or argmax
+        # idx = np.searchsorted(MN_old.vecvalue, corrIDs, side='left')
+        idx = corrMatrix.argmax(axis=1)
+        timeOldLocRemove[MN_i] = MN_old.vectime[idx]
+        #### CN
+        timeCNUpdate[MN_i] = CN.vectime[CN.vecvalue == corrIDs]
+        if not np.all(CN.vecvalue == corrIDs):
+            print(f"Warning: {CN.vecvalue == corrIDs=}")
+        #### neigh
+        for NN in neighRows.itertuples():
+            corrMatrix = NN.vecvalue == corrIDs[:,np.newaxis]
+            corrID_idx, neigh_idx = np.nonzero(corrMatrix)
+            assert len(np.unique(corrID_idx)) == len(corrID_idx), f"Warning: in {NN=} we have {corrMatrix=}"
+                #print(f"This should be wrong, no corrID can have different updates")
+            assert len(np.unique(neigh_idx)) == len(neigh_idx), f"Warning: in {NN=} we have {corrMatrix=}"
+                #print(f"This should be wrong, no update can have different corrIDs")
+            timeNNUpdate[MN_i][corrID_idx] = NN.vectime[neigh_idx]
+        #### delay
+        corrIDs_before = np.concatenate(([np.nan], corrIDs[:-1]))
+        corrMatrixBefore = pktCorrID.vecvalue == corrIDs_before[:,np.newaxis]
+        corrMatrixAfter  = pktCorrID.vecvalue == corrIDs[:,np.newaxis]
+        ## before
+        filterDelayBeforeIdx = np.searchsorted(pktDelay.vectime, timeOldLocRemove[MN_i], side="right") -1 # TODO check side parameter
+        # don't assign when negative idx
+        delay[0,MN_i][filterDelayBeforeIdx>=0] = pktDelay.vecvalue[filterDelayBeforeIdx][filterDelayBeforeIdx >= 0]
+        ## during
+        filterDelayDuringIdx = ~np.logical_and(corrMatrixBefore, pktRR.vecvalue > 0)
+        delay_b= np.broadcast_to(pktDelay.vecvalue, filterDelayDuringIdx.shape)
+        delay_mean = np.ma.masked_where(filterDelayDuringIdx, delay_b).mean(axis=1)
+        delay[1,MN_i] = delay_mean.filled(np.nan)
+        ## after
+        corrID_idx, time_idx = argfind(np.logical_and(corrMatrixAfter, pktRR.vecvalue == 0))
+        delay[2,MN_i][corrID_idx] = pktDelay.vecvalue[time_idx]
+    print(f"Warning: check delay data gathering")
+    print(time)
+    print(timeOldLocRemove)
+    print(f"{timeNNUpdate=}")
+    print(timeCNUpdate)
+    print(f"{delay=}")
+
+    pktNNDelay = np.array([0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2]) # FIXME: WRONG HARDCODED
+    timeCNRerouting = timeNNUpdate - pktNNDelay
+    assert np.all((timeCNRerouting < timeCNUpdate) | np.isnan(timeCNRerouting)), f"Not normal: {timeCNRerouting=} < {timeCNUpdate=}"
+    lossTime = np.maximum(0, np.where(~np.isnan(timeCNRerouting), timeCNRerouting, timeCNUpdate) - (timeOldLocRemove - delay[0]))
+    reroutingTime = timeCNUpdate - timeCNRerouting
+    print(f"{timeOldLocRemove - delay[0]=}")
+    print(f"{timeCNRerouting=}")
+    print(f"{timeCNUpdate=}")
+    print(f"{lossTime=}")
+    print(f"{reroutingTime=}")
+
+def slow_gather_data(df):
+    "Previous routine to gather data in useable datastructures"
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> start gather data (slow) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+    # 1 row voor elke MN
+    newLocRows = df.loc[df["name"].str.contains("newLocatorAssigned:vector")].reset_index(drop=True)
+    locRemoveRows = df.loc[df["name"].str.contains("oldLocatorUnreachable:vector")].reset_index(drop=True)
+    neighRows = df.loc[df["name"].str.contains("neighLocatorUpdateReceived:vector")].reset_index(drop=True)
+    # meerdere rows voor elke server per client
+    rcvdRows = df.loc[df["name"].str.contains("locatorUpdateReceived:vector")].reset_index(drop=True)
+    pktDelayRows = df.loc[df["name"].str.contains("endToEndDelay:vector")].reset_index(drop=True)
+    pktCorrIDRows = df.loc[df["name"].str.contains("corrIDTag:vector")].reset_index(drop=True)
+    pktReroutedRows = df.loc[df["name"].str.contains("reroutedTag:vector")].reset_index(drop=True)
+    assert newLocRows["vecvalue"].equals(rcvdRows["vecvalue"]), "assume only 1 MN and 1 CN"
+    assert pktDelayRows["vectime"].equals(pktCorrIDRows["vectime"])
+    assert pktDelayRows["vectime"].equals(pktReroutedRows["vectime"])
+
+    time = newLocRows["vectime"]
+    # dimensions
+    numMN = newLocRows.shape[0] # Mobile Nodes
+    numLocUpdates = newLocRows["vectime"].apply(np.size) # Series
     numCN = np.nan # Corresponding Nodes (for each LocUpdate)
     # data structures
     # FIXME: assumption: only 1 neigh or CN
@@ -57,20 +182,20 @@ def process(props):
     # slow
     for MN_i, timeSeries in enumerate(time.to_numpy()):
         for i, t in enumerate(timeSeries):
-            corrID = sendRows["vecvalue"][MN_i][i]
-            ## locRemove
+            corrID = newLocRows["vecvalue"][MN_i][i]
+            #### locRemove
             row = locRemoveRows.iloc[0]
             times = row["vectime"][row["vecvalue"] == corrID] # could be multiple
             if len(times) != 1:
                 print(f"Warning: oldLocatorUnreachable has {len(times)=}, this probably means that it was unreachable for an amount of time")
                 print(f"Check correct behaviour of this case")
             timeOldLocRemove[MN_i,i] = times[0] # should be earliest
-            ## CN
+            #### CN
             #for server, row in rcvdRows.iterrows():
             row = rcvdRows.iloc[0]
             # each server got exactly 1 update
             timeCNUpdate[MN_i,i] = row["vectime"][row["vecvalue"] == corrID]
-            ## neigh
+            #### neigh
             for _, row in neighRows.iterrows():
                 neighTime = row["vectime"][row["vecvalue"] == corrID]
                 if neighTime.size != 0:
@@ -79,29 +204,66 @@ def process(props):
         assert ((timeNeighUpdate[MN_i] <= timeCNUpdate[MN_i]) | np.isnan(timeNeighUpdate[MN_i]) | np.isnan(timeCNUpdate[MN_i])).all(), "Wrong timeordering, check data"
     print(time.to_numpy())
     print(timeOldLocRemove)
-    print(timeNeighUpdate)
+    print(f"{timeNeighUpdate=}")
     print(timeCNUpdate)
-    assert sendRows["vecvalue"].equals(rcvdRows["vecvalue"]), "assume only 1 MN and 1 CN"
     
 #locatorUpdateSent
     for MN_i, timeSeries in enumerate(time.to_numpy()):
-        row = end2endDelayRows.iloc[0]
+        row = pktDelayRows.iloc[0]
         # https://stackoverflow.com/a/26026189
         filterDelayBeforeIdx = np.searchsorted(row["vectime"], timeOldLocRemove[MN_i, :], side="right") -1 # TODO check side parameter
         # don't assign when negative idx
         delay[0,MN_i][filterDelayBeforeIdx>=0] = row["vecvalue"][filterDelayBeforeIdx][filterDelayBeforeIdx >= 0]
         print(filterDelayBeforeIdx)
         print(row["vectime"][filterDelayBeforeIdx][filterDelayBeforeIdx>=0])
+
     print(delay)
 #    lossTime =
-#    reroutingTime = 
+#    reroutingTime =
 
-############################
-    
-    # apply vector operations
-    df = utils.perform_vector_ops(df, props["vector_operations"])
-    return df
+def first_nonzero(arr, axis, invalid_val=-1):
+    mask = arr!=False
+    return np.where(mask.any(axis=axis), mask.argmax(axis=axis), invalid_val)
+
+def last_nonzero(arr, axis, invalid_val=-1):
+    mask = arr!=False
+    # len(axis) - found index - 1
+    val = arr.shape[axis] - np.flip(mask, axis=axis).argmax(axis=axis) - 1
+    return np.where(mask.any(axis=axis), val, invalid_val)
+
+def argfind(arr, axis=1, side='first'):
+    """
+    Return indices of first occurence along certain dimension
+    Believe it or not, this has not yet been implemented for numpy...
+    """
+    #corrID_idx, time_idx = np.nonzero(a)
+    #corrID_idx, idxidx = np.unique(corrID_idx, return_index=True)
+    corrID_idx = np.arange(arr.shape[0])
+    if side == 'first':
+        time_idx = first_nonzero(arr, axis)
+    elif side == 'last':
+        time_idx = last_nonzero(arr, axis)
+    else:
+        raise f"welp, wrong {side=} argument"
+    return corrID_idx[time_idx != -1], time_idx[time_idx != -1]
 
 
 if __name__ == '__main__':
-    print("TODO: test module")
+    #              0 1       5         10        15        20
+    a = np.array([[0,0,0,0,0,0,0,0,0,1,1,1,0,0,1,1,1,1,1,1,0,0,0,0],
+                  [0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]])
+    def test_argfind():
+        corrID_idx, time_idx = argfind(a)
+        assert np.all(corrID_idx == np.array([0,1]))
+        assert np.all(time_idx == np.array([9,5]))
+        corrID_idx, time_idx = argfind(a, side='last')
+        assert np.all(corrID_idx == np.array([0,1]))
+        assert np.all(time_idx == np.array([19,5]))
+        print("test argfind() succeeded")
+    def test_first_nonzero():
+        time_idx = first_nonzero(a, 1)
+        assert np.all(time_idx == np.array([9,5,-1]))
+        print("test first_nonzero() succeeded")
+    test_argfind()
+    test_first_nonzero()
