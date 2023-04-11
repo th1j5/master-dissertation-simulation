@@ -39,19 +39,31 @@ void AdjacencyManagerServer::handleSelfMessages(cMessage *msg) {
     throw cRuntimeError("Unknown selfmessage type!");
 }
 
-void AdjacencyManagerServer::handleAdjMgmtMessage(inet::Packet *packet) {
-    // Handles incoming Ask Loc messages
+bool AdjacencyManagerServer::isFilteredMessage(inet::Packet *packet) {
     const auto& msg = packet->peekAtFront<AdjMgmtMessage>();
     if (msg->getOp() != LOCREQUEST) {
         EV_WARN << "Server received a non-LOCREQUEST message, dropping." << endl;
-        return;
+        return true;
     }
     // check that the packet arrived on the interface we are supposed to serve
     int inputInterfaceId = packet->getTag<InterfaceInd>()->getInterfaceId();
     if (inputInterfaceId != ie->getInterfaceId()) {
         EV_WARN << "AdjMessage arrived on a different interface, dropping\n";
-        return;
+        return true;
     }
+    return false;
+}
+
+void AdjacencyManagerServer::handleAdjMgmtMessage(inet::Packet *packet) {
+    /**
+     *  Enrollment (cfr Ouroboros)
+     *  Handles incoming Ask Loc messages
+     */
+    if (isFilteredMessage(packet))
+        return;
+
+    const auto& msg = packet->peekAtFront<AdjMgmtMessage>();
+    // insert neighbouring node into the networkgraph, by assigning it a Loc + linking to it
     L3Address assignedLoc = assignLoc(msg->getCID());
     sendAssignLocPacket(msg, assignedLoc);
 

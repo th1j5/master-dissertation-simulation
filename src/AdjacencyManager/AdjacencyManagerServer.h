@@ -49,6 +49,7 @@ class AdjacencyManagerServer: public AdjacencyManager {
     virtual void handleNeighMessage(inet::Packet *pk) override;
     virtual void openSocket() override;
 
+    virtual bool isFilteredMessage(inet::Packet *packet);
     virtual inet::L3Address assignLoc(inet::MacAddress clientID);
     virtual inet::L3Address* getLocByID(inet::MacAddress clientID);
 //    virtual void sendAssignLocPacket(int seqNum, inet::L3Address assignedLoc);
