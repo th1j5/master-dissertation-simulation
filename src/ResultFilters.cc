@@ -17,8 +17,18 @@ Register_ResultFilter("locUpdateCorrelation", LocUpdatesFilter);
 void LocUpdatesFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details)
 {
     if (auto packet = dynamic_cast<Packet *>(object)) {
+        // TODO Should use Dissector, but I don't understand that completely
         if (auto multiplexPacket = dynamicPtrCast<const MultiplexerPacket>(packet->peekAtFront())) {
             fire(this, t, multiplexPacket->getLocUpdateCorrelationID(), details);
+        }
+        else {
+            // TODO: replace outer if/else by while/if (once we are sure)
+            while (!dynamicPtrCast<const MultiplexerPacket>(packet->peekAtFront())) {
+                packet->popAtFront();
+            }
+            if (auto multiplexPacket = dynamicPtrCast<const MultiplexerPacket>(packet->peekAtFront())) {
+                fire(this, t, multiplexPacket->getLocUpdateCorrelationID(), details);
+            }
         }
     }
 }
