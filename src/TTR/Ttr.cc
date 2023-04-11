@@ -47,13 +47,12 @@ INetfilter::IHook::Result Ttr::datagramPreRoutingHook(Packet *datagram) {
     auto& ipv4Header = removeNetworkProtocolHeader<Ipv4Header>(datagram);
     auto oldLoc = ipv4Header->getDestinationAddress();
     auto rerouteEntry = ttrEntries.find(oldLoc);
-    if (rerouteEntry != ttrEntries.end()) {
-        ipv4Header->setDestinationAddress(rerouteEntry->second);
+    if (rerouteEntry != ttrEntries.end() && rerouteEntry->second.active) {
+        ipv4Header->setDestinationAddress(rerouteEntry->second.newLoc);
         // reroute++
         auto& header = datagram->peekAtFront<UdpHeader>();
         b offset = header->getChunkLength(); // start from the beginning
         datagram->updateDataAt<MultiplexerPacket>(f_increaseReroute, offset);
-        // FIXME: make sure to recognize re-routed packets
     }
     insertNetworkProtocolHeader(datagram, Protocol::ipv4, ipv4Header);
 
@@ -63,9 +62,20 @@ INetfilter::IHook::Result Ttr::datagramPreRoutingHook(Packet *datagram) {
 void Ttr::addTTREntry(L3Address newLoc, L3Address oldLoc) {
     if (ttrEntries.size() == 0) // Register only 1 time, when needed. Most efficient check.
         networkProtocol->registerHook(0, this);
-    bool succes = ttrEntries.insert({oldLoc, newLoc}).second;
+    bool succes = ttrEntries.insert({oldLoc, {newLoc, false}}).second;
     if (!succes)
         throw cRuntimeError("The old locator %s was already inserted in the TTR table for some reason...", oldLoc.str().c_str());
+}
+void Ttr::activateEntry(L3Address oldLoc) {
+    auto entry = ttrEntries.find(oldLoc);
+    if (entry != ttrEntries.end()) {
+        if (!entry->second.active)
+            entry->second.active = true;
+        else
+            throw cRuntimeError("TTR entry with oldLoc %s was already active?!", oldLoc.str().c_str());
+    }
+    else
+        throw cRuntimeError("TTR entry with oldLoc %s not found!", oldLoc.str().c_str());
 }
 // TODO: Do we need a timer?? see mechanism 3
 //const auto& msg = pk->peekAtFront<LocatorUpdatePacket>();

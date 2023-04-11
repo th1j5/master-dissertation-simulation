@@ -31,7 +31,13 @@ class Ttr : public cSimpleModule, public inet::NetfilterBase::HookBase
 {
   protected:
     inet::ModuleRefByPar<inet::INetfilter> networkProtocol;
-    std::map<inet::L3Address, inet::L3Address> ttrEntries;
+    struct ttrEntry {
+        inet::L3Address newLoc;
+        bool active;
+        // TODO: Timeout
+    };
+
+    std::map<inet::L3Address, ttrEntry> ttrEntries;
     // TODO unordered_map might be interesting (O(1)), but L3Address needs to implement a hash
     // Will need to `friend std::hash<L3Address>;` or use parsim (un)packing??
 //    template<> struct std::hash<inet::L3Address> {
@@ -50,6 +56,7 @@ class Ttr : public cSimpleModule, public inet::NetfilterBase::HookBase
     Ttr() {};
     virtual ~Ttr();
     virtual void addTTREntry(inet::L3Address newLoc, inet::L3Address oldLoc);
+    virtual void activateEntry(inet::L3Address oldLoc);
     virtual Result datagramPreRoutingHook(inet::Packet *datagram) override;
     virtual Result datagramForwardHook(inet::Packet *datagram) override {return ACCEPT;};
     virtual Result datagramPostRoutingHook(inet::Packet *datagram) override {return ACCEPT;};
