@@ -33,7 +33,6 @@ class AdjacencyManagerClient: public AdjacencyManager {
     int numLocUpdateSend = 0;
 
     // state
-    cMessage *selfMsg = nullptr;
     int seqSend = 0;
     int seqRcvd = -1;
     struct {

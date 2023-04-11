@@ -14,10 +14,13 @@
 // 
 
 #include "AdjacencyManagerServer.h"
+#include "AdjacencyManagerClient.h"
+#include "cleanAdjMgmtMessage_m.h"
 
 #include "inet/linklayer/common/InterfaceTag_m.h"
 #include "inet/networklayer/ipv4/Ipv4InterfaceData.h"
 #include "inet/common/stlutils.h"
+#include "inet/networklayer/common/L3AddressResolver.h"
 
 using namespace inet; // more OK to use in .cc
 
@@ -26,11 +29,13 @@ simsignal_t neighLocUpdateRcvdSignal = cComponent::registerSignal("neighLocatorU
 
 AdjacencyManagerServer::~AdjacencyManagerServer() {
     // TODO Auto-generated destructor stub
+    leased.clear();
 }
 
 void AdjacencyManagerServer::initialize(int stage) {
     AdjacencyManager::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
+        selfMsg = new CleanAdjMgmtMessage("unsubscribe resources please", CLEAN);
         ttr.reference(this, "transientTriangularRoutingModule", false); // false, when tested
     }
     WATCH_MAP(leased);

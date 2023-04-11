@@ -54,8 +54,13 @@ using namespace omnetpp;
  */
 class AdjacencyManager : public inet::ApplicationBase, public cListener, public inet::UdpSocket::ICallback
 {
+  public:
+    static simsignal_t oldLocRemovedSignal;
   protected:
-    enum SelfMsgKinds { SEND = 1 }; // TODO: enough?
+    enum SelfMsgKinds { SEND = 1, CLEAN }; // TODO: enough?
+
+    // state
+    cMessage *selfMsg = nullptr;
 
     // parameters
     int serverPort = -1;
@@ -99,7 +104,7 @@ class AdjacencyManager : public inet::ApplicationBase, public cListener, public 
 
   public:
     AdjacencyManager() {}
-    virtual ~AdjacencyManager() {}
+    virtual ~AdjacencyManager();
 };
 
 #endif

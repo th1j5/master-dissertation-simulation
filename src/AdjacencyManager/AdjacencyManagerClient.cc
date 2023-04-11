@@ -27,11 +27,9 @@ using namespace inet; // more OK to use in .cc
 
 Define_Module(AdjacencyManagerClient);
 simsignal_t neighLocUpdateSentSignal = cComponent::registerSignal("neighLocatorUpdateSent");
-simsignal_t oldLocRemovedSignal = cComponent::registerSignal("oldLocatorUnreachable");
 simsignal_t AdjacencyManagerClient::newLocAssignedSignal = cComponent::registerSignal("newLocatorAssigned");
 
 AdjacencyManagerClient::~AdjacencyManagerClient() {
-    cancelAndDelete(selfMsg);
     if (host->isSubscribed(IMobility::mobilityStateChangedSignal, this))
         host->unsubscribe(IMobility::mobilityStateChangedSignal, this);
 }
@@ -176,7 +174,7 @@ void AdjacencyManagerClient::handleAdjMgmtMessage(inet::Packet *packet) {
             }
         }
         if (iroute == nullptr) {
-            // create gateway route
+            // create gateway route - replaces previous default route
             Ipv4Route *route = new Ipv4Route();
             route->setDestination(Ipv4Address());
             route->setNetmask(Ipv4Address());

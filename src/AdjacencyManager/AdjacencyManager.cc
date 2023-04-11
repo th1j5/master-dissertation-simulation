@@ -21,6 +21,11 @@
 using namespace inet; // more OK to use in .cc
 
 Register_Abstract_Class(AdjacencyManager);
+simsignal_t AdjacencyManager::oldLocRemovedSignal = cComponent::registerSignal("oldLocatorUnreachable");
+
+AdjacencyManager::~AdjacencyManager() {
+    cancelAndDelete(selfMsg);
+}
 
 void AdjacencyManager::initialize(int stage)
 {
