@@ -4,6 +4,7 @@
 	<interface hosts='serverGateway' towards='routersAlongPath[*]' address='10.2.1.x' netmask='255.255.255.x'/>
 	<interface hosts="serverGateway" names="ppp0" address="10.x.x.x" netmask="255.255.255.x"/> <!-- add automatically other subnet interfaces to routers -->
 	<interface hosts="routersAlongPath[*]" names="ppp0" address="10.x.x.x" netmask="255.255.255.x"/> <!-- add automatically other subnet interfaces to routers -->
+	<!-- add-subnet-route="false" doesn't work as expected, see github issue https://github.com/inet-framework/inet/issues/881 -->
 	<interface hosts='routersAlongPath[0]' names="wlan0" address='10.2.2.1' netmask='255.255.255.0' />
 	<interface hosts='routersAlongPath[1]' names="wlan0" address='10.2.3.1' netmask='255.255.255.0' />
 	<interface hosts='routersAlongPath[2]' names="wlan0" address='10.2.4.1' netmask='255.255.255.0' />
