@@ -67,9 +67,9 @@ network Prototype4GWifi
         serverGateway: RoutingNode;
         routersAlongPath[numRoutersAlongPath]: RoutingNode {
             parameters:
-                // TODO fix filter on UDPData packets
-                // ??? https://inet.omnetpp.org/docs/users-guide/ch-packetfilter.html
+                // FIXME: packetDropped
                 @statistic[endToEndDelayLost](title="end-to-end delay lost packets"; source="dataAge(packetDropped)"; unit=s; record=histogram,vector; interpolationmode=none);
+                @statistic[corrIDLost](title="correlation ID lost packets"; source="locUpdateCorrelation(udpData(packetDropped))"; record=vector; interpolationmode=none);
         }
         users[numUsers]: MobileNode;
     connections:

@@ -9,6 +9,7 @@
 #define RESULTFILTERS_H_
 
 #include <omnetpp/cresultfilter.h>
+#include "inet/common/packet/PacketFilter.h"
 
 using namespace omnetpp;
 
@@ -24,6 +25,15 @@ class LocUpdatesFilter: public cObjectResultFilter {
 
 class ReroutedFilter: public cObjectResultFilter {
   public:
+    virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
+};
+
+class UDPDataFilter: public cObjectResultFilter {
+  protected:
+    inet::PacketFilter *packetFilter;
+  public:
+    ~UDPDataFilter();
+    virtual void init(Context *ctx) override;
     virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
 };
 

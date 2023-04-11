@@ -44,3 +44,19 @@ void ReroutedFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObjec
         }
     }
 }
+
+Register_ResultFilter("udpData", UDPDataFilter);
+void UDPDataFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
+    if (auto packet = dynamic_cast<Packet *>(object)) {
+        if (packetFilter->matches(packet))
+            fire(this, t, object, details);
+    }
+}
+void UDPDataFilter::init(Context *ctx) {
+    cObjectResultFilter::init(ctx);
+    packetFilter = new PacketFilter();
+    packetFilter->setPattern("UDPData*");
+}
+UDPDataFilter::~UDPDataFilter() {
+    delete packetFilter;
+}
