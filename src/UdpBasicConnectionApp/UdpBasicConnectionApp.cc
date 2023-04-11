@@ -118,7 +118,6 @@ void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc, int numLocUpdates)
     payload->setChunkLength(B(10)); // FIXME: hardcoded
     payload->setSequenceNumber(numSent);
     payload->setSequenceNumLocUpdate(numLocUpdates);
-    // FIXME: mostly works, not necessarily (https://stackoverflow.com/questions/10749419/encode-multiple-ints-into-a-double)
     payload->setLocUpdateCorrelationID(corrID);
     payload->setOldAddress(L3Address()); // TODO: update
     payload->setNewAddress(newLoc);

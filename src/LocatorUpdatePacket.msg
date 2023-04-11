@@ -20,7 +20,6 @@ import MultiplexerPacket;
 
 class LocatorUpdatePacket extends MultiplexerPacket {
     multiplexerDestination = "flow_allocator";
-    // TODO: insert usefull info
     int sequenceNumLocUpdate;
     inet::L3Address oldAddress;
     inet::L3Address newAddress;

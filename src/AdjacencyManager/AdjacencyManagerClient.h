@@ -20,9 +20,9 @@
 #include "inet/networklayer/contract/IArp.h"
 
 class AdjacencyManagerClient: public AdjacencyManager {
-public:
+  public:
     static simsignal_t newLocAssignedSignal;
-protected:
+  protected:
     inet::ModuleRefByPar<inet::IArp> arp;
     inet::NetworkInterface *ieOld = nullptr; // interface to configure
 
@@ -73,8 +73,11 @@ protected:
   public:
     AdjacencyManagerClient() {}
     virtual ~AdjacencyManagerClient();
+    // FIXME: encoding ints mostly works, but not necessarily (https://stackoverflow.com/questions/10749419/encode-multiple-ints-into-a-double)
     double getCorrID(int numLocUpdates) {return (((int64_t)host->getId())<<32) | ((int64_t)numLocUpdates);};
     int getNumLocUpdates() {return numLocUpdates;};
+    inet::NetworkInterface* getIeNew() { return ie;};
+    inet::NetworkInterface* getIeOld() { return ieOld;};
 };
 
 #endif /* ADJACENCYMANAGER_ADJACENCYMANAGERCLIENT_H_ */

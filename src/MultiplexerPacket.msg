@@ -29,7 +29,6 @@ void increaseReroute(const inet::Ptr<MultiplexerPacket> & multiplexPacket) {
 }}
 
 class MultiplexerPacket extends inet::ApplicationPacket {
-    // TODO: insert usefull info
     string multiplexerDestination;
     // client ID + seq number of loc Update, to correlate all update events
     // If in LocatorUpdatePacket, it is the corrID from the sender
