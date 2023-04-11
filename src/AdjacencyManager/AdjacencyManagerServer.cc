@@ -41,7 +41,17 @@ void AdjacencyManagerServer::initialize(int stage) {
     WATCH_MAP(leased);
 }
 void AdjacencyManagerServer::handleSelfMessages(cMessage *msg) {
-    throw cRuntimeError("Unknown selfmessage type!");
+    cModule* MNhost;
+    switch (msg->getKind()) {
+    case CLEAN:
+        MNhost = static_cast<CleanAdjMgmtMessage*>(msg)->getMNhostForUpdate();
+        MNhost->unsubscribe(oldLocRemovedSignal, this);
+        break;
+    case SEND:
+    default:
+        throw cRuntimeError("Invalid kind %d in self message", (int)msg->getKind());
+        break;
+    }
 }
 
 bool AdjacencyManagerServer::isFilteredMessage(inet::Packet *packet) {
@@ -76,15 +86,64 @@ void AdjacencyManagerServer::handleAdjMgmtMessage(inet::Packet *packet) {
     numReceived++;
 }
 
+//void AdjacencyManagerServer::insertRoute(L3Address client) {
+    /**
+     *  We assume that all destinations are included in the default subnet route
+     *  Furthermore, when the destination is not found in the Global ARP table, the packet will be simply dropped.
+     *  This simplifies the state needed to remember
+     */
+//}
+
 void AdjacencyManagerServer::handleNeighMessage(inet::Packet *pk) {
+    /**
+     *  Disenrollment (<-> enrollment)
+     *  Remove neighbouring node from networkgraph by removing Loc + removing routes to it
+     *  BUT, we can install a Transient Triangular Routing escape hatch for late packets
+     */
     // adjust routing table + rerouting mechanisms
-    // Warn Ttr...
+    const auto& msg = pk->peekAtFront<LocatorUpdatePacket>();
+    auto oldLoc = msg->getOldAddress();
+    // Warn Ttr
     if (ttr != nullptr) {
-        const auto& msg = pk->peekAtFront<LocatorUpdatePacket>();
-        ttr->addTTREntry(msg->getNewAddress(), msg->getOldAddress());
+        ttr->addTTREntry(msg->getNewAddress(), oldLoc);
     }
+
+    // Very unorthodox adjmgmt: subscribe with the client (==*other host*)
+    auto MNhost = L3AddressResolver().findHostWithAddress(msg->getNewAddress());
+    auto MNhostAdjMgmt = dynamic_cast<AdjacencyManagerClient*>(MNhost->getSubmodule("adjacencyManager"));
+    if (MNhostAdjMgmt == nullptr)
+        throw cRuntimeError("Didn't find AdjMgmt module of the MN");
+    // check that the link with MN is still active
+    if (oldLoc == MNhostAdjMgmt->getIeOld()->getNetworkAddress())
+        MNhost->subscribe(oldLocRemovedSignal, this);
+    else
+        linkSevered(MNhostAdjMgmt->getIeNew()->getMacAddress()); // clientID
+
     emit(neighLocUpdateRcvdSignal, pk);
     // TODO
+}
+
+void AdjacencyManagerServer::linkSevered(MacAddress clientID) {
+    if (ttr != nullptr) {
+        ttr->activateEntry(leased[clientID]);
+    }
+}
+
+void AdjacencyManagerServer::receiveSignal(cComponent *source, simsignal_t signalID, intval_t numLocUpdate, cObject *details) {
+    Enter_Method("%s", cComponent::getSignalName(signalID));
+    // emulate signal from lower layer that the client is not reachable anymore
+    if (signalID == oldLocRemovedSignal) {
+        auto MNhostAdjMgmt = dynamic_cast<AdjacencyManagerClient*>(source);
+        auto MNhost = MNhostAdjMgmt->getParentModule();
+        if (MNhostAdjMgmt == nullptr)
+            throw cRuntimeError("Didn't find AdjMgmt module of the MN");
+        // compare numLocUpdate - not needed:
+        // if this signal is received, we always can cut it loose (either we were too late or just on time)
+        linkSevered(MNhostAdjMgmt->getIeNew()->getMacAddress()); // clientID always MAC of new interface
+        static_cast<CleanAdjMgmtMessage*>(selfMsg)->setMNhost(MNhost);
+        scheduleAfter(0, selfMsg); // unsubscribe
+    }
+    else throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
 }
 
 L3Address AdjacencyManagerServer::assignLoc(MacAddress clientID) {

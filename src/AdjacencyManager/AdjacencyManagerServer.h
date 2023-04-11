@@ -54,6 +54,9 @@ class AdjacencyManagerServer: public AdjacencyManager {
     virtual inet::L3Address* getLocByID(inet::MacAddress clientID);
 //    virtual void sendAssignLocPacket(int seqNum, inet::L3Address assignedLoc);
     virtual void sendAssignLocPacket(const inet::Ptr<const AdjMgmtMessage> msg, inet::L3Address assignedLoc);
+    virtual void linkSevered(inet::MacAddress clientID);
+
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, intval_t numLocUpdate, cObject *details) override;
 
     // Lifecycle methods
     virtual void handleStartOperation(inet::LifecycleOperation *operation) override;

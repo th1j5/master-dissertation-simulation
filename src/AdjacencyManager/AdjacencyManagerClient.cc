@@ -92,6 +92,7 @@ void AdjacencyManagerClient::sendGetLocPacket()
     getLoc->setSeqNumber(seqSend);
     getLoc->setCID(macAddress); // my mac address
     getLoc->setChunkLength(B(length));
+    getLoc->setLocUpdateCorrelationID(getCorrID(numLocUpdates+1)); // Next newLoc event
 
     packet->insertAtBack(getLoc);
 
