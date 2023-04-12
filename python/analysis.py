@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import pandas as pd
+import itertools
 from omnetpp.scave import results, chart, utils
 
 def process(props):
@@ -44,14 +45,21 @@ def gather_data(df):
     pktDelayRows = df.loc[df["name"].str.contains("endToEndDelay:vector")].reset_index(drop=True)
     pktCorrIDRows = df.loc[df["name"].str.contains("corrIDTag:vector")].reset_index(drop=True)
     pktReroutedRows = df.loc[df["name"].str.contains("reroutedTag:vector")].reset_index(drop=True)
-    print(f"{newLocRows['vecvalue'].iloc[0]=}")
-    print(f"{rcvdRows['vecvalue'].iloc[0]=}")
-    if not newLocRows["vecvalue"].eq(rcvdRows["vecvalue"]).all():
+    pktLossRows = df.loc[df["name"].str.contains("endToEndDelayLost:vector")].reset_index(drop=True)
+    pktCorrIDLossRows = df.loc[df["name"].str.contains("corrIDLost:vector")].reset_index(drop=True)
+    print(f"{newLocRows['vecvalue'].iloc[0][-1]=}")
+    print(f"{rcvdRows['vecvalue'].iloc[0][-1]=}")
+    # .eq: can't determine equality of numpy arrays - .equals: can't handle mismatching numpy arrays (index out of bounds)
+    try:
+        gelijk = newLocRows["vecvalue"].equals(rcvdRows["vecvalue"])
+    except:
+        gelijk = False
+    if not gelijk:
         print("There is a mismatch between newLoc and rcvdRows") # assume only 1 MN and 1 CN
         newLocRows.iloc[0]["vectime"]  = newLocRows.iloc[0]["vectime"][:-1]
         newLocRows.iloc[0]["vecvalue"] = newLocRows.iloc[0]["vecvalue"][:-1]
         pd.testing.assert_series_equal(newLocRows["vecvalue"], rcvdRows["vecvalue"])
-    if not newLocRows["vecvalue"].eq(locRemoveRows["vecvalue"]).all():
+    if not newLocRows["vecvalue"].equals(locRemoveRows["vecvalue"]):
         pass
 #        print("There is a mismatch between newLoc and locRemoveRows") # assume only 1 MN and 1 CN
 #        locRemoveRows["vecvalue"].iloc[0] = locRemoveRows["vecvalue"].iloc[0][:-1]
@@ -59,6 +67,11 @@ def gather_data(df):
     assert pktDelayRows["vectime"].equals(pktCorrIDRows["vectime"])
     assert pktDelayRows["vectime"].equals(pktReroutedRows["vectime"])
     assert np.all([np.all(MN<=1) for MN in pktReroutedRows["vecvalue"]]), "damn, you got packets which rerouted more than once!"
+    if not neighRows.index.equals(pktLossRows.index):
+        print("The amount of neighbours with updates is different from the amount of neighbours with packet loss")
+        print(f"{neighRows=}")
+        print(f"{pktLossRows=}")
+    assert pktLossRows["vectime"].equals(pktCorrIDLossRows["vectime"])
 
     time = newLocRows["vectime"]
     # dimensions
@@ -71,12 +84,14 @@ def gather_data(df):
     timeOldLocRemove = np.empty(dim)
     timeCNUpdate     = np.empty(dim)
     timeNNUpdate     = np.empty(dim)
+    NNDelay          = np.empty(dim)
     lossTime         = np.empty(dim)
     reroutingTime    = np.empty(dim)
     delay            = np.empty((3, *dim)) # before, during, after
     timeOldLocRemove[:] = np.nan
     timeCNUpdate[:]     = np.nan
     timeNNUpdate[:]     = np.nan
+    NNDelay[:]          = np.nan
     lossTime[:]         = np.nan
     reroutingTime[:]    = np.nan
     delay[:]            = np.nan
@@ -100,7 +115,7 @@ def gather_data(df):
         if not np.all(CN.vecvalue == corrIDs):
             print(f"Warning: {CN.vecvalue == corrIDs=}")
         #### neigh
-        for NN in neighRows.itertuples():
+        for NN, pktNNDelay, pktNNCorrID in itertools.zip_longest(neighRows.itertuples(), pktLossRows.itertuples(), pktCorrIDLossRows.itertuples()):
             corrMatrix = NN.vecvalue == corrIDs[:,np.newaxis]
             corrID_idx, neigh_idx = np.nonzero(corrMatrix)
             assert len(np.unique(corrID_idx)) == len(corrID_idx), f"Warning: in {NN=} we have {corrMatrix=}"
@@ -108,13 +123,22 @@ def gather_data(df):
             assert len(np.unique(neigh_idx)) == len(neigh_idx), f"Warning: in {NN=} we have {corrMatrix=}"
                 #print(f"This should be wrong, no update can have different corrIDs")
             timeNNUpdate[MN_i][corrID_idx] = NN.vectime[neigh_idx]
+            print(f"{corrID_idx=}")
+            ## delay of lost packets
+            #corrMatrixLoss = pktNNCorrID.vecvalue == corrIDs[:,np.newaxis]
+            if not pktNNDelay == None:
+                filterDelayBeforeNNIdx = np.searchsorted(pktNNDelay.vectime, timeNNUpdate[MN_i][corrID_idx], side="right")-1
+                print(f"{filterDelayBeforeNNIdx=}")
+                #print(f"{NNDelay[MN_i][:]=}")
+                NNDelay[MN_i][corrID_idx][filterDelayBeforeNNIdx>=0] = pktNNDelay.vecvalue[filterDelayBeforeNNIdx][filterDelayBeforeNNIdx>=0]
         #### delay
         corrIDs_before = np.concatenate(([np.nan], corrIDs[:-1]))
         corrMatrixBefore = pktCorrID.vecvalue == corrIDs_before[:,np.newaxis]
         corrMatrixAfter  = pktCorrID.vecvalue == corrIDs[:,np.newaxis]
-        ## before
+        ## before - FIXME assumption: packets are not rerouted before the old loc is removed
         filterDelayBeforeIdx = np.searchsorted(pktDelay.vectime, timeOldLocRemove[MN_i], side="right") -1 # TODO check side parameter
         # don't assign when negative idx
+        print(pktDelay.vectime[filterDelayBeforeIdx][filterDelayBeforeIdx >= 0])
         delay[0,MN_i][filterDelayBeforeIdx>=0] = pktDelay.vecvalue[filterDelayBeforeIdx][filterDelayBeforeIdx >= 0]
         ## during
         filterDelayDuringIdx = ~np.logical_and(corrMatrixBefore, pktRR.vecvalue > 0)
@@ -130,11 +154,13 @@ def gather_data(df):
     print(f"time={time}")
     print(f"{timeOldLocRemove=}")
     print(f"{timeNNUpdate=}")
+    print(f"{NNDelay=}")
     print(f"{timeCNUpdate=}")
     print(f"{delay=}")
 
-    pktNNDelay = np.array([0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2]) # FIXME: WRONG HARDCODED
-    timeCNRerouting = timeNNUpdate - pktNNDelay
+    #pktNNDelay = np.array([0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2]) # FIXME: WRONG HARDCODED
+    #FIXME: if NNDelay == nan (due to no packets dropped/lost, are our calculations still correct?)
+    timeCNRerouting = timeNNUpdate - NNDelay
     assert np.all((timeCNRerouting < timeCNUpdate) | np.isnan(timeCNRerouting)), f"Not normal: {timeCNRerouting=} < {timeCNUpdate=}"
     lossTime = np.maximum(0, np.where(~np.isnan(timeCNRerouting), timeCNRerouting, timeCNUpdate) - (timeOldLocRemove - delay[0]))
     reroutingTime = timeCNUpdate - timeCNRerouting
