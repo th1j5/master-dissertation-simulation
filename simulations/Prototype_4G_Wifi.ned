@@ -27,13 +27,11 @@ import prototype.TTR.TtrIpv4NetworkLayer;
 import prototype.DelayLink;
 import prototype.LocNodes.*;
 
-network Prototype4GWifi
+network Prototype4GWifi extends basic_network
 {
     parameters:
-        **.ipv4.typename = "TtrIpv4NetworkLayer";
         int numUsers;
         int numRoutersAlongPath;
-        @display("bgb=400,400;bgg=100,1,grey95");
 
         @figure[title](type=label; pos=0,-1; anchor=sw; color=darkblue);
 
@@ -46,16 +44,6 @@ network Prototype4GWifi
         @statistic[locUpdSent](source=users[0].app[0].locatorUpdateSent; record=figure(count); targetFigure=sentLocUpdText);
         @statistic[locUpdRcvd](source=server.app[0].locatorUpdateReceived; record=figure(count); targetFigure=rcvdLocUpdText);
     submodules:
-        visualizer: <default(firstAvailableOrEmpty("IntegratedCanvasVisualizer"))> like IIntegratedVisualizer if typename != "" {
-            @display("p=15,35");
-        }
-        configurator: Ipv4NetworkConfigurator {
-            @display("p=15,15");
-        }
-        radioMedium: UnitDiskRadioMedium {
-            @display("p=15,55");
-        }
-
         server: RoutingNode {
             parameters:
                 @display("p=301,20;i=device/server2");

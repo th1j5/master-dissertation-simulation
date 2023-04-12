@@ -21,6 +21,20 @@ import inet.applications.contract.IApp;
 //
 // TODO auto-generated module
 //
+module NeighbourNode extends Router {
+    parameters:
+        *.adjacencyMgmt = default(absPath(".adjacencyManager"));
+        numWlanInterfaces = default(1);
+    submodules:
+        adjacencyManager: <default("AdjacencyManagerServer")> like IApp if typename != "" {      // AdjMgmt over UDP/TCP protocol
+            parameters:
+	            @display("p=700,75");
+	            newLocInterface = "wlan0";
+        }
+    connections:
+        adjacencyManager.socketOut --> at.in++ if exists(adjacencyManager);
+        adjacencyManager.socketIn <-- at.out++ if exists(adjacencyManager);
+}
 module RoutingNode extends Router
 {
     parameters:
@@ -37,9 +51,18 @@ module RoutingNode extends Router
 module MobileNode extends ManetRouter {
     parameters:
         *.adjacencyMgmt = default(absPath(".adjacencyManager"));
+        app[*].typename = default("UdpBasicConnectionApp");
+        app[*].packetName = default("UDPData");    // don't change this, see Resultfilters
+        app[*].newLocInterface = "wlan0"; // from which Interface to pick up Loc changes
+        app[*].oldLocInterface = "wlan1"; // pick up unreachability of old Loc
+        numWlanInterfaces = default(2);   // newLoc (wlan[0]) and oldLoc (wlan[1])
     submodules:
         adjacencyManager: <default("AdjacencyManagerClient")> like IApp if typename != "" {      // AdjMgmt over UDP/TCP protocol
-            @display("p=700,75");
+            parameters:
+	            @display("p=700,75");
+	            newLocInterface = "wlan0";
+	            oldLocInterface = "wlan1";
+	            getLocInterval  = default(0.1s);
         }
     connections:
         adjacencyManager.socketOut --> at.in++ if exists(adjacencyManager);

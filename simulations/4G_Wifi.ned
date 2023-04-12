@@ -39,14 +39,14 @@ network Wifi_4G extends basic_network
         @statistic[locUpdSent](source=users[0].app[0].locatorUpdateSent; record=figure(count); targetFigure=sentLocUpdText);
         @statistic[locUpdRcvd](source=server.app[0].locatorUpdateReceived; record=figure(count); targetFigure=rcvdLocUpdText);
     submodules:
-        server: Router {
+        server: RoutingNode {
             parameters:
                 @display("p=301,20;i=device/server2");
         }
         backbone: RoutingNode;
         streetCabin: RoutingNode;
-        homes[numHomes]: RoutingNode;
-        mobileTower[2]: RoutingNode;
+        homes[numHomes]: NeighbourNode;
+        mobileTower[2]: NeighbourNode;
         users[numUsers]: MobileNode;
     connections:
         server.pppg++ <--> DelayLink <--> backbone.pppg++;
