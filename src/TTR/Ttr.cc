@@ -25,7 +25,9 @@ using namespace inet; // more OK to use in .cc
 Define_Module(Ttr);
 
 Ttr::~Ttr() {
-    // FIXME delete table here
+    for (const auto& e: ttrEntries) {
+        cancelAndDelete(e.second.destructMsg);
+    }
 }
 
 void Ttr::initialize(int stage)
@@ -33,6 +35,7 @@ void Ttr::initialize(int stage)
     cSimpleModule::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
         networkProtocol.reference(this, "networkProtocolModule", true);
+        networkProtocol->registerHook(0, this);
     }
     else if (stage == INITSTAGE_NETWORK_LAYER) {
 //        auto text = std::to_string(natEntries.size()) + " entries";
@@ -59,12 +62,15 @@ INetfilter::IHook::Result Ttr::datagramPreRoutingHook(Packet *datagram) {
     return ACCEPT;
 }
 
-void Ttr::addTTREntry(L3Address newLoc, L3Address oldLoc) {
-    if (ttrEntries.size() == 0) // Register only 1 time, when needed. Most efficient check.
-        networkProtocol->registerHook(0, this);
-    bool succes = ttrEntries.insert({oldLoc, {newLoc, false}}).second;
-    if (!succes)
+void Ttr::addTTREntry(L3Address newLoc, L3Address oldLoc, simtime_t TTL) {
+    Enter_Method_Silent("Add a TTR Entry");
+    cMessage* msg = new cMessage("remove TTR entry");
+    scheduleAfter(TTL, msg);
+    bool succes = ttrEntries.insert({oldLoc, {newLoc, false, TTL, msg}}).second;
+    if (!succes) {
+        cancelAndDelete(msg);
         throw cRuntimeError("The old locator %s was already inserted in the TTR table for some reason...", oldLoc.str().c_str());
+    }
 }
 void Ttr::activateEntry(L3Address oldLoc) {
     auto entry = ttrEntries.find(oldLoc);
@@ -74,8 +80,26 @@ void Ttr::activateEntry(L3Address oldLoc) {
         else
             throw cRuntimeError("TTR entry with oldLoc %s was already active?!", oldLoc.str().c_str());
     }
-    else
-        throw cRuntimeError("TTR entry with oldLoc %s not found!", oldLoc.str().c_str());
+    else {
+        EV_WARN << "TTR entry with oldLoc %s was not found while trying to activate" << endl;
+        EV_WARN << "This means that the TTL expired BEFORE the link was severed" << endl;
+//        throw cRuntimeError("TTR entry with oldLoc %s not found!", oldLoc.str().c_str());
+    }
+}
+
+void Ttr::handleMessage(cMessage *msg) {
+    ASSERT(msg->isSelfMessage());
+    /* Clean up TTR table */
+    auto itr = ttrEntries.begin();
+    while (itr != ttrEntries.end() && msg != itr->second.destructMsg) {
+        ++itr;
+    }
+    if (itr == ttrEntries.end())
+        throw cRuntimeError("Wanted to destroy TTR entry, but it wasn't found");
+    else {
+        ttrEntries.erase(itr);
+        delete msg;
+    }
 }
 // TODO: Do we need a timer?? see mechanism 3
 //const auto& msg = pk->peekAtFront<LocatorUpdatePacket>();

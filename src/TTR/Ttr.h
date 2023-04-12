@@ -34,7 +34,8 @@ class Ttr : public cSimpleModule, public inet::NetfilterBase::HookBase
     struct ttrEntry {
         inet::L3Address newLoc;
         bool active;
-        // TODO: Timeout
+        simtime_t TTL;
+        cMessage* destructMsg;
     };
 
     std::map<inet::L3Address, ttrEntry> ttrEntries;
@@ -49,20 +50,18 @@ class Ttr : public cSimpleModule, public inet::NetfilterBase::HookBase
   protected:
     virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
     virtual void initialize(int stage) override;
-    virtual void handleMessage(cMessage *msg) override {
-            throw cRuntimeError("This module can not handle messages");};
+    virtual void handleMessage(cMessage *msg) override;
 
   public:
     Ttr() {};
     virtual ~Ttr();
-    virtual void addTTREntry(inet::L3Address newLoc, inet::L3Address oldLoc);
+    virtual void addTTREntry(inet::L3Address newLoc, inet::L3Address oldLoc, simtime_t TTL = SIMTIME_ZERO);
     virtual void activateEntry(inet::L3Address oldLoc);
     virtual Result datagramPreRoutingHook(inet::Packet *datagram) override;
     virtual Result datagramForwardHook(inet::Packet *datagram) override {return ACCEPT;};
     virtual Result datagramPostRoutingHook(inet::Packet *datagram) override {return ACCEPT;};
     virtual Result datagramLocalInHook(inet::Packet *datagram) override {return ACCEPT;};
     virtual Result datagramLocalOutHook(inet::Packet *datagram) override {return ACCEPT;};
-
 };
 
 #endif
