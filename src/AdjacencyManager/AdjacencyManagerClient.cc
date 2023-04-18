@@ -30,7 +30,7 @@ simsignal_t neighLocUpdateSentSignal = cComponent::registerSignal("neighLocatorU
 simsignal_t AdjacencyManagerClient::newLocAssignedSignal = cComponent::registerSignal("newLocatorAssigned");
 
 AdjacencyManagerClient::~AdjacencyManagerClient() {
-    if (host->isSubscribed(IMobility::mobilityStateChangedSignal, this))
+    if (host != nullptr && host->isSubscribed(IMobility::mobilityStateChangedSignal, this))
         host->unsubscribe(IMobility::mobilityStateChangedSignal, this);
 }
 

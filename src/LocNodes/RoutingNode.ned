@@ -25,6 +25,7 @@ module NeighbourNode extends Router {
     parameters:
         *.adjacencyMgmt = default(absPath(".adjacencyManager"));
         numWlanInterfaces = default(1);
+        **.radio.displayCommunicationRange = default(true);
     submodules:
         adjacencyManager: <default("AdjacencyManagerServer")> like IApp if typename != "" {      // AdjMgmt over UDP/TCP protocol
             parameters:
