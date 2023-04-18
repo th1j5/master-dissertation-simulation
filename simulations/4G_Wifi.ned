@@ -15,10 +15,6 @@
 
 package prototype.simulations;
 
-import inet.node.inet.*;
-import inet.node.ethernet.*;
-
-import prototype.TTR.TtrIpv4NetworkLayer;
 import prototype.DelayLink;
 import prototype.LocNodes.*;
 
