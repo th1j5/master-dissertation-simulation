@@ -18,10 +18,24 @@ package prototype.LocNodes;
 import inet.node.inet.*;
 import inet.applications.contract.IApp;
 
+import prototype.UniSphere.*;
+
 //
 // TODO auto-generated module
 //
-module NeighbourNode extends Router {
+module ScalableRouter extends Router {
+    submodules:
+        unisphere: UniSphereControlPlane if exists(generic) { // might need an interface: "like IOspf" in inet.routing.contract
+            parameters:
+                @display("p=975,226");
+        }
+    connections:
+        unisphere.networkLayerOut --> tn.in++ if exists(generic);
+        unisphere.networkLayerIn <-- tn.out++ if exists(generic);
+}
+module MobileScalableRouter extends ManetRouter {
+}
+module NeighbourNode extends ScalableRouter {
     parameters:
         *.adjacencyMgmt = default(absPath(".adjacencyManager"));
         numWlanInterfaces = default(1);
@@ -36,7 +50,7 @@ module NeighbourNode extends Router {
         adjacencyManager.socketOut --> at.in++ if exists(adjacencyManager);
         adjacencyManager.socketIn <-- at.out++ if exists(adjacencyManager);
 }
-module RoutingNode extends Router
+module RoutingNode extends ScalableRouter
 {
     parameters:
         *.adjacencyMgmt = default(absPath(".adjacencyManager"));
