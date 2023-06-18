@@ -28,17 +28,6 @@ using namespace inet; // more OK to use in .cc
 
 Define_Module(AdjacencyManager);
 
-namespace {
-static bool isNeighbourRoute(const IRoute *entry) {
-    if (entry->getMetric() == 0) { // neighbour
-        ASSERT(entry->getDestinationAsGeneric() == entry->getNextHopAsGeneric());
-        return true;
-    }
-    else
-        return false;
-}
-}
-
 /**
  * routerId (using it as an ID?)
  * NextHopRoutingTable: is highest interface address --> L3Address (but which type?)
@@ -127,7 +116,7 @@ void AdjacencyManager::receiveSignal(cComponent *source, simsignal_t signalID, c
         ASSERT((std::string) host->getNedTypeName() == "prototype.LocNodes.MobileNode");
 
         auto nodesInRangeSorted = getNodesInRangeSorted();
-        auto connectedNodes = getConnectedNodes();
+        auto connectedNodes = getConnectedNodes(irt);
         EV_WARN << "Connected to: "; print(connectedNodes); EV_WARN << endl;
         if (!nodesInRangeSorted.empty()) {
             EV_WARN << "Connecting to:" << nodesInRangeSorted.back() << endl;
@@ -164,16 +153,6 @@ AdjacencyManager::SortedDistanceList AdjacencyManager::getNodesInRangeSorted() {
 //bool AdjacencyManager::cmp(cModule* left, cModule* right) {
 //    return getDistance(left) > getDistance(right);
 //}
-
-std::vector<cModule*> AdjacencyManager::getConnectedNodes() {
-    std::vector<cModule*> nodes;
-    for (int i=0; i<irt->getNumRoutes(); i++) {
-        IRoute *e = irt->getRoute(i);
-        if(isNeighbourRoute(e))
-            nodes.push_back(L3AddressResolver().findHostWithAddress(e->getDestinationAsGeneric()));
-    }
-    return nodes;
-}
 
 bool AdjacencyManager::isWirelessNodeAndInRange(cModule *module) {
     // filter out this.host if "prototype.LocNodes.MobileNode" is also allowed

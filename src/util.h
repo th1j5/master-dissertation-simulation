@@ -10,6 +10,7 @@
 
 #include <omnetpp.h>
 #include "inet/networklayer/common/L3Address.h"
+#include "inet/networklayer/common/L3AddressResolver.h"
 
 static inet::L3Address getHostID(cModule* host) {
     // FIXME problematic code
@@ -18,6 +19,27 @@ static inet::L3Address getHostID(cModule* host) {
     inet::L3Address peerID = peerRt->getRouterIdAsGeneric();
     ASSERT(!peerID.isUnspecified());
     return peerID;
+}
+
+namespace {
+static bool isNeighbourRoute(const inet::IRoute *entry) {
+    if (entry->getMetric() == 0) { // neighbour
+        ASSERT(entry->getDestinationAsGeneric() == entry->getNextHopAsGeneric());
+        return true;
+    }
+    else
+        return false;
+}
+}
+
+static std::vector<cModule*> getConnectedNodes(inet::ModuleRefByPar<inet::IRoutingTable> irt) {
+    std::vector<cModule*> nodes;
+    for (int i=0; i<irt->getNumRoutes(); i++) {
+        inet::IRoute *e = irt->getRoute(i);
+        if(isNeighbourRoute(e))
+            nodes.push_back(inet::L3AddressResolver().findHostWithAddress(e->getDestinationAsGeneric()));
+    }
+    return nodes;
 }
 
 #endif /* UTIL_H_ */

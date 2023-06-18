@@ -46,7 +46,6 @@ class AdjacencyManager: public omnetpp::cSimpleModule, public cListener {
 
 //    virtual void addNeighbourRoute() override;
     virtual SortedDistanceList getNodesInRangeSorted();
-    virtual std::vector<cModule*> getConnectedNodes();
     virtual bool isWirelessNodeAndInRange(cModule *module);
     virtual inet::units::values::m getDistance(cModule *other);
 
