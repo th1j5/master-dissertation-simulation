@@ -18,6 +18,7 @@ package prototype.LocNodes;
 import inet.node.inet.*;
 import inet.applications.contract.IApp;
 
+import prototype.AdjacencyManager.*;
 import prototype.UniSphere.*;
 
 //
@@ -27,6 +28,10 @@ module ScalableRouter extends Router {
     parameters:
         *.routingTableModule = default("^.generic.routingTable");
     submodules:
+        adjacencyManager: AdjacencyManager {
+            parameters:
+                @display("p=125,320");
+        }
         unisphere: UniSphereControlPlane if exists(generic) { // might need an interface: "like IOspf" in inet.routing.contract
             parameters:
                 @display("p=975,226");
@@ -38,6 +43,11 @@ module ScalableRouter extends Router {
 module MobileScalableRouter extends ManetRouter {
     parameters:
         *.routingTableModule = default("^.generic.routingTable");
+    submodules:
+        adjacencyManager: AdjacencyManager {
+            parameters:
+                @display("p=125,320");
+        }
 }
 module NeighbourNode extends ScalableRouter {
     parameters:
