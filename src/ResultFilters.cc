@@ -4,7 +4,7 @@
  *  Created on: Mar 31, 2023
  *      Author: thijs
  */
-
+#ifdef false
 #include "ResultFilters.h"
 
 #include "inet/common/packet/Packet.h"
@@ -70,3 +70,4 @@ void UDPDataFilter::init(Context *ctx) {
 UDPDataFilter::~UDPDataFilter() {
     delete packetFilter;
 }
+#endif

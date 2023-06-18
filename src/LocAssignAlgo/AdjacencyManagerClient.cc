@@ -30,8 +30,6 @@ simsignal_t neighLocUpdateSentSignal = cComponent::registerSignal("neighLocatorU
 simsignal_t AdjacencyManagerClient::newLocAssignedSignal = cComponent::registerSignal("newLocatorAssigned");
 
 AdjacencyManagerClient::~AdjacencyManagerClient() {
-    if (host != nullptr && host->isSubscribed(IMobility::mobilityStateChangedSignal, this))
-        host->unsubscribe(IMobility::mobilityStateChangedSignal, this);
 }
 
 void AdjacencyManagerClient::initialize(int stage) {
@@ -43,7 +41,6 @@ void AdjacencyManagerClient::initialize(int stage) {
         arp.reference(this, "arpModule", true);
     }
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
-        host->subscribe(IMobility::mobilityStateChangedSignal, this);
     }
 }
 namespace {

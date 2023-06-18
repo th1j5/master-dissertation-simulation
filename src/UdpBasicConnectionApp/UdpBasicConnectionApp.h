@@ -31,7 +31,7 @@ protected:
     // parameters
     std::vector<double> corrID_MN;
     const char * const locUpdateName = "LocUpdate";
-    inet::ModuleRefByPar<AdjacencyManager> adjMgmt;
+    //inet::ModuleRefByPar<AdjacencyManagerOld> adjMgmt;
 
     // statistics
     int numLocUpdateSend = 0;

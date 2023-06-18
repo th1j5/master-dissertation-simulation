@@ -16,9 +16,6 @@
 #ifndef ADJACENCYMANAGER_ADJACENCYMANAGERSERVER_H_
 #define ADJACENCYMANAGER_ADJACENCYMANAGERSERVER_H_
 
-#include <map>
-#include "AdjacencyManager.h"
-#include "TTR/Ttr.h"
 
 class AdjacencyManagerServer: public AdjacencyManager {
   private:
@@ -58,14 +55,6 @@ class AdjacencyManagerServer: public AdjacencyManager {
 
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, intval_t numLocUpdate, cObject *details) override;
 
-    // Lifecycle methods
-    virtual void handleStartOperation(inet::LifecycleOperation *operation) override;
-    virtual void handleStopOperation(inet::LifecycleOperation *operation) override;
-    virtual void handleCrashOperation(inet::LifecycleOperation *operation) override;
-
-  public:
-    AdjacencyManagerServer() {}
-    virtual ~AdjacencyManagerServer();
 };
 
 #endif /* ADJACENCYMANAGER_ADJACENCYMANAGERSERVER_H_ */

@@ -22,7 +22,7 @@
 #include "inet/networklayer//ipv4/Ipv4InterfaceData.h"
 #include "inet/queueing/common/LabelsTag_m.h" // Alternative: inet/common/FlowTag.msg
 // #include "inet/InterfaceTableAccess.h"
-#include "AdjacencyManager/AdjacencyManagerClient.h"
+//#include "AdjacencyManager/AdjacencyManagerClient.h"
 
 using namespace inet;
 
@@ -36,7 +36,7 @@ void UdpBasicConnectionApp::initialize(int stage)
     UdpBasicApp::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
         host = getContainingNode(this);
-        adjMgmt.reference(this, "adjacencyMgmt", false);
+        //adjMgmt.reference(this, "adjacencyMgmt", false);
     }
 }
 void UdpBasicConnectionApp::processStart() {
@@ -45,27 +45,28 @@ void UdpBasicConnectionApp::processStart() {
     if (destAddresses.size() > 1)
         throw cRuntimeError("We cannot handle more than 1 communicating entity per app instantiation");
     if (!destAddresses.empty()) {
-        host->subscribe(AdjacencyManagerClient::newLocAssignedSignal, this);
+//        host->subscribe(AdjacencyManagerClient::newLocAssignedSignal, this);
     } // only subscribe (=sending LocUpdates) if it has corresponding node
 };
 void UdpBasicConnectionApp::processStop() {
     UdpBasicApp::processStop();
     // assume unsubscribing doesn't error if not really subscribed...
-    host->unsubscribe(AdjacencyManagerClient::newLocAssignedSignal, this);
+//    host->unsubscribe(AdjacencyManagerClient::newLocAssignedSignal, this);
 };
 void UdpBasicConnectionApp::receiveSignal(cComponent *source, simsignal_t signalID, intval_t numLocUpdates, cObject *details) {
     Enter_Method("%s", cComponent::getSignalName(signalID));
     const NetworkInterface *ie;
 
-    if (signalID == AdjacencyManagerClient::newLocAssignedSignal) {
-        ie = check_and_cast<const NetworkInterface *>(details);
-        if (strcmp(ie->getInterfaceName(), par("newLocInterface")) != 0)
-            throw cRuntimeError("new Loc Assigned signal is assigned to other interface than newLocInterface");
-        L3Address newLocator = ie->getNetworkAddress();
-        if (newLocator.isUnspecified())
-            throw cRuntimeError("new Loc is unspecified");
-        sendLocUpdate(newLocator, numLocUpdates);
-    }
+    if (true) {}
+//    if (signalID == AdjacencyManagerClient::newLocAssignedSignal) {
+//        ie = check_and_cast<const NetworkInterface *>(details);
+//        if (strcmp(ie->getInterfaceName(), par("newLocInterface")) != 0)
+//            throw cRuntimeError("new Loc Assigned signal is assigned to other interface than newLocInterface");
+//        L3Address newLocator = ie->getNetworkAddress();
+//        if (newLocator.isUnspecified())
+//            throw cRuntimeError("new Loc is unspecified");
+//        sendLocUpdate(newLocator, numLocUpdates);
+//    }
     else
         throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
 };
@@ -108,7 +109,8 @@ void UdpBasicConnectionApp::sendPacket()
 
 void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc, int numLocUpdates)
 {
-    double corrID = dynamic_cast<AdjacencyManagerClient *>(adjMgmt.get())->getCorrID(numLocUpdates);
+    //double corrID = dynamic_cast<AdjacencyManagerClient *>(adjMgmt.get())->getCorrID(numLocUpdates);
+    double corrID = 123.0;
     std::ostringstream str;
     str << locUpdateName << "-" << numLocUpdates;
     Packet *packet = new Packet(str.str().c_str());

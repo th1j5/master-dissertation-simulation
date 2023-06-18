@@ -17,6 +17,7 @@
 #define __PROTOTYPE_ADJACENCYMANAGER_H_
 
 #include <omnetpp.h>
+#include <map>
 
 #include "inet/applications/base/ApplicationBase.h"
 #include "inet/linklayer/common/MacAddress.h"
@@ -26,6 +27,9 @@
 
 #include "AdjMgmtMessage_m.h"
 #include "LocatorUpdatePacket_m.h"
+
+#include "TTR/Ttr.h"
+#include "inet/networklayer/contract/IArp.h"
 
 using namespace omnetpp;
 
@@ -52,8 +56,17 @@ using namespace omnetpp;
  * The first answer wins, and becomes/remains the Loc.
  * Whenever the Loc changes, the interface table is updated (and signals are activated)
  */
-class AdjacencyManager : public inet::ApplicationBase, public cListener, public inet::UdpSocket::ICallback
+class AdjacencyManagerOld : public inet::ApplicationBase, public cListener, public inet::UdpSocket::ICallback
 {
+  private:
+    template<typename K, typename V, typename _C, typename Tv, typename = typename std::enable_if<std::is_convertible<Tv, V>::value>::type>
+    inline bool containsValue(const std::map<K,V,_C>& m, const Tv& a) {
+        for (const auto& [key, value] : m) {
+            if (value == a)
+                return true;
+        }
+        return false;
+    }
   public:
     static simsignal_t oldLocRemovedSignal;
   protected:
@@ -71,6 +84,7 @@ class AdjacencyManager : public inet::ApplicationBase, public cListener, public 
     cModule *host = nullptr; // containing host module (@networkNode)
     inet::NetworkInterface *ie = nullptr; // interface to configure
     inet::ModuleRefByPar<inet::IIpv4RoutingTable> irt; // routing table to update
+    inet::ModuleRefByPar<inet::IInterfaceTable> ift;
 
     // statistics
     int numSent = 0; // number of sent DHCP messages
@@ -97,14 +111,15 @@ class AdjacencyManager : public inet::ApplicationBase, public cListener, public 
     virtual void socketDataArrived(inet::UdpSocket *socket, inet::Packet *packet) override;
     virtual void socketErrorArrived(inet::UdpSocket *socket, inet::Indication *indication) override;
     virtual void socketClosed(inet::UdpSocket *socket) override;
+
     // Lifecycle methods
     virtual void handleStartOperation(inet::LifecycleOperation *operation) override;
     virtual void handleStopOperation(inet::LifecycleOperation *operation) override;
     virtual void handleCrashOperation(inet::LifecycleOperation *operation) override;
 
   public:
-    AdjacencyManager() {}
-    virtual ~AdjacencyManager();
+    AdjacencyManagerOld() {}
+    virtual ~AdjacencyManagerOld();
 };
 
 #endif

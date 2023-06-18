@@ -16,8 +16,6 @@
 #ifndef ADJACENCYMANAGER_ADJACENCYMANAGERCLIENT_H_
 #define ADJACENCYMANAGER_ADJACENCYMANAGERCLIENT_H_
 
-#include "AdjacencyManager.h"
-#include "inet/networklayer/contract/IArp.h"
 
 class AdjacencyManagerClient: public AdjacencyManager {
   public:
@@ -64,14 +62,7 @@ class AdjacencyManagerClient: public AdjacencyManager {
 
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override;
 
-    // Lifecycle methods
-    virtual void handleStartOperation(inet::LifecycleOperation *operation) override;
-    virtual void handleStopOperation(inet::LifecycleOperation *operation) override;
-    virtual void handleCrashOperation(inet::LifecycleOperation *operation) override;
-
   public:
-    AdjacencyManagerClient() {}
-    virtual ~AdjacencyManagerClient();
     // FIXME: encoding ints mostly works, but not necessarily (https://stackoverflow.com/questions/10749419/encode-multiple-ints-into-a-double)
     double getCorrID(int numLocUpdates) {return (((int64_t)host->getId())<<32) | ((int64_t)numLocUpdates);};
     int getNumLocUpdates() {return numLocUpdates;};

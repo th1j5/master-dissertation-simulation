@@ -13,21 +13,21 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-#include "AdjacencyManager.h"
-
+#include "AdjacencyManagerOld_old.h"
 #include "inet/common/ModuleAccess.h"
 #include "inet/linklayer/common/InterfaceTag_m.h"
+#include "inet/networklayer/nexthop/NextHopRoute.h"
 
 using namespace inet; // more OK to use in .cc
 
-Register_Abstract_Class(AdjacencyManager);
-simsignal_t AdjacencyManager::oldLocRemovedSignal = cComponent::registerSignal("oldLocatorUnreachable");
+Register_Abstract_Class(AdjacencyManagerOld);
+simsignal_t AdjacencyManagerOld::oldLocRemovedSignal = cComponent::registerSignal("oldLocatorUnreachable");
 
-AdjacencyManager::~AdjacencyManager() {
+AdjacencyManagerOld::~AdjacencyManagerOld() {
     cancelAndDelete(selfMsg);
 }
 
-void AdjacencyManager::initialize(int stage)
+void AdjacencyManagerOld::initialize(int stage)
 {
     ApplicationBase::initialize(stage);
 
@@ -41,6 +41,7 @@ void AdjacencyManager::initialize(int stage)
         serverPort = 70;
         // get the routing table to update and subscribe it to the blackboard
         irt.reference(this, "routingTableModule", true);
+        ift.reference(this, "interfaceTableModule", true);
     }
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
         // get the hostname
@@ -52,9 +53,36 @@ void AdjacencyManager::initialize(int stage)
         socket.setOutputGate(gate("socketOut"));
         openSocket();
     }
+    if (false) {
+        // add all neighbours
+        // we assume L2 triggers, but
+        // since ppp-connections don't do that, we iterate over all ppp
+        for (int i=0; i < ift->getNumInterfaces(); i++) {
+            NetworkInterface *iface = ift->getInterface(i);
+            if (iface->isPointToPoint()) {
+                //iface->getRxTransmissionChannel()->getSourceGate();
+                int oGateID = iface->getNodeOutputGateId();
+                cGate* rxGate = gate(oGateID)->getPathEndGate();
+                cModule* rx = getContainingNode(rxGate->getOwnerModule());
+                auto* peerIft= dynamic_cast<InterfaceTable*>(rx->getSubmodule("interfaceTableModule"));
+                // get neighbour ID (when unisphere)
+                L3Address peerID = L3Address(peerIft->findFirstNonLoopbackInterface()->getModuleIdAddress());
+                ASSERT(!peerID.isUnspecified());
+
+                NextHopRoute* route = new NextHopRoute();
+                route->setDestination(peerID);
+                route->setInterface(iface);
+                route->setNextHop(peerID);
+                //route->setMetric(0);
+                route->setAdminDist(inet::IRoute::RouteAdminDist::dDirectlyConnected);
+                //route->setPrefixLength(l);
+                irt->addRoute(route);
+            }
+        }
+    }
 }
 
-void AdjacencyManager::handleMessageWhenUp(cMessage *msg)
+void AdjacencyManagerOld::handleMessageWhenUp(cMessage *msg)
 {
     if (msg->isSelfMessage()) {
         handleSelfMessages(msg);
@@ -66,7 +94,7 @@ void AdjacencyManager::handleMessageWhenUp(cMessage *msg)
         throw cRuntimeError("Unknown incoming gate: '%s'", msg->getArrivalGate()->getFullName());
 }
 
-void AdjacencyManager::socketDataArrived(UdpSocket *socket, Packet *packet)
+void AdjacencyManagerOld::socketDataArrived(UdpSocket *socket, Packet *packet)
 {
     // process incoming packet
     auto data = packet->peekData<MultiplexerPacket>();
@@ -81,34 +109,34 @@ void AdjacencyManager::socketDataArrived(UdpSocket *socket, Packet *packet)
         throw cRuntimeError("unrecognized multiplexer destination");
     delete packet;
 }
-void AdjacencyManager::socketErrorArrived(UdpSocket *socket, Indication *indication)
+void AdjacencyManagerOld::socketErrorArrived(UdpSocket *socket, Indication *indication)
 {
     EV_WARN << "Ignoring UDP error report " << indication->getName() << endl;
     delete indication;
 }
-void AdjacencyManager::socketClosed(UdpSocket *socket_) {}
+void AdjacencyManagerOld::socketClosed(UdpSocket *socket_) {}
 
-void AdjacencyManager::sendToUdp(Packet *msg, int srcPort, const L3Address& destAddr, int destPort)
+void AdjacencyManagerOld::sendToUdp(Packet *msg, int srcPort, const L3Address& destAddr, int destPort)
 {
     EV_INFO << "Sending packet " << msg << endl;
     msg->addTagIfAbsent<InterfaceReq>()->setInterfaceId(ie->getInterfaceId());
     socket.sendTo(msg, destAddr, destPort);
 }
 
-void AdjacencyManager::handleStartOperation(LifecycleOperation *operation)
+void AdjacencyManagerOld::handleStartOperation(LifecycleOperation *operation)
 {
     ie = chooseInterface();
     macAddress = ie->getMacAddress();
 }
 
-void AdjacencyManager::handleStopOperation(LifecycleOperation *operation)
+void AdjacencyManagerOld::handleStopOperation(LifecycleOperation *operation)
 {
     ie = nullptr;
 
     socket.close();
 }
 
-void AdjacencyManager::handleCrashOperation(LifecycleOperation *operation)
+void AdjacencyManagerOld::handleCrashOperation(LifecycleOperation *operation)
 {
     ie = nullptr;
 
@@ -116,7 +144,7 @@ void AdjacencyManager::handleCrashOperation(LifecycleOperation *operation)
         socket.destroy(); // TODO  in real operating systems, program crash detected by OS and OS closes sockets of crashed programs.
 }
 
-NetworkInterface *AdjacencyManager::chooseInterface(const char *interfaceName)
+NetworkInterface *AdjacencyManagerOld::chooseInterface(const char *interfaceName)
 {
     IInterfaceTable *ift = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
     if (interfaceName == nullptr)

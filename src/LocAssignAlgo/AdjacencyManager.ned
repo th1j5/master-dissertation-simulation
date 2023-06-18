@@ -13,7 +13,8 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-package prototype.AdjacencyManager;
+//package prototype.AdjacencyManager;
+package prototype.LocAssignAlgo;
 
 import inet.applications.contract.IApp;
 

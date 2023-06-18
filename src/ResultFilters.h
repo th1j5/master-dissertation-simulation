@@ -7,6 +7,7 @@
 
 #ifndef RESULTFILTERS_H_
 #define RESULTFILTERS_H_
+#ifdef false
 
 #include <omnetpp/cresultfilter.h>
 #include "inet/common/packet/PacketFilter.h"
@@ -38,3 +39,4 @@ class UDPDataFilter: public cObjectResultFilter {
 };
 
 #endif /* RESULTFILTERS_H_ */
+#endif

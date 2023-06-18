@@ -41,29 +41,29 @@ module NeighbourNode extends ScalableRouter {
         numWlanInterfaces = default(1);
         **.radio.displayCommunicationRange = default(true);
     submodules:
-        adjacencyManager: <default("AdjacencyManagerServer")> like IApp if typename != "" {      // AdjMgmt over UDP/TCP protocol
+        adjacencyManager_OLD: <default("")> like IApp if typename != "" {      // AdjMgmt over UDP/TCP protocol
             parameters:
 	            @display("p=700,75");
 	            newLocInterface = "wlan0";
         }
     connections:
-        adjacencyManager.socketOut --> at.in++ if exists(adjacencyManager);
-        adjacencyManager.socketIn <-- at.out++ if exists(adjacencyManager);
+        adjacencyManager_OLD.socketOut --> at.in++ if exists(adjacencyManager_OLD);
+        adjacencyManager_OLD.socketIn <-- at.out++ if exists(adjacencyManager_OLD);
 }
 module RoutingNode extends ScalableRouter
 {
     parameters:
         *.adjacencyMgmt = default(absPath(".adjacencyManager"));
     submodules:
-        adjacencyManager: <default("")> like IApp if typename != "" {      // AdjMgmt over UDP/TCP protocol
+        adjacencyManager_OLD: <default("")> like IApp if typename != "" {      // AdjMgmt over UDP/TCP protocol
             @display("p=700,75");
         }
     connections:
-        adjacencyManager.socketOut --> at.in++ if exists(adjacencyManager);
-        adjacencyManager.socketIn <-- at.out++ if exists(adjacencyManager);
+        adjacencyManager_OLD.socketOut --> at.in++ if exists(adjacencyManager_OLD);
+        adjacencyManager_OLD.socketIn <-- at.out++ if exists(adjacencyManager_OLD);
 }
 // Can get new Loc (doesn't HAS to mean that it moves)
-module MobileNode extends ManetRouter {
+module MobileNode extends MobileScalableRouter {
     parameters:
         *.adjacencyMgmt = default(absPath(".adjacencyManager"));
         app[*].typename = default("UdpBasicConnectionApp");
@@ -72,7 +72,7 @@ module MobileNode extends ManetRouter {
         app[*].oldLocInterface = "wlan1"; // pick up unreachability of old Loc
         numWlanInterfaces = default(2);   // newLoc (wlan[0]) and oldLoc (wlan[1])
     submodules:
-        adjacencyManager: <default("AdjacencyManagerClient")> like IApp if typename != "" {      // AdjMgmt over UDP/TCP protocol
+        adjacencyManager_OLD: <default("")> like IApp if typename != "" {      // AdjMgmt over UDP/TCP protocol
             parameters:
 	            @display("p=700,75");
 	            newLocInterface = "wlan0";
@@ -80,6 +80,6 @@ module MobileNode extends ManetRouter {
 	            getLocInterval  = default(0.1s);
         }
     connections:
-        adjacencyManager.socketOut --> at.in++ if exists(adjacencyManager);
-        adjacencyManager.socketIn <-- at.out++ if exists(adjacencyManager);
+        adjacencyManager_OLD.socketOut --> at.in++ if exists(adjacencyManager_OLD);
+        adjacencyManager_OLD.socketIn <-- at.out++ if exists(adjacencyManager_OLD);
 }
