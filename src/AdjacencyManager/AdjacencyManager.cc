@@ -14,6 +14,7 @@
 // 
 
 #include "AdjacencyManager.h"
+#include "../util.h"
 #include "inet/networklayer/nexthop/NextHopRoute.h"
 #include "inet/networklayer/nexthop/NextHopRoutingTable.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
@@ -37,6 +38,12 @@ static bool isNeighbourRoute(const IRoute *entry) {
         return false;
 }
 }
+
+/**
+ * routerId (using it as an ID?)
+ * NextHopRoutingTable: is highest interface address --> L3Address (but which type?)
+ * IPv4RoutingTable:    ?
+ */
 
 void AdjacencyManager::initialize(int stage) {
     if (stage == INITSTAGE_LOCAL) {
@@ -72,10 +79,11 @@ void AdjacencyManager::initialize(int stage) {
 
 // TODO what are the semantics of this?? does it connects IPCPs or Locs or ...?
 void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface) {
-    auto* peerRt = dynamic_cast<IRoutingTable*>(neighbour->findModuleByPath(".generic.routingTable"));
-    // get neighbour ID (when unisphere)
-    L3Address peerID = peerRt->getRouterIdAsGeneric();
-    ASSERT(!peerID.isUnspecified());
+    //FIXME (will probably result in mayhem - or not, apparently, MODULEID doesn't even uses this, but IPvX & MODULEPATH does)
+    // see routerId remark at start
+    int longestPrefix = std::numeric_limits<int>::max();
+
+    L3Address peerID = getHostID(neighbour);
 
     // check if already in RoutingTable
     bool routeAlreadyPresent = false;
@@ -94,15 +102,12 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
         route->setNextHop(peerID);
         route->setMetric(0);
     //                    route->setAdminDist(inet::IRoute::RouteAdminDist::dDirectlyConnected); // only IPv4
-        //route->setPrefixLength(l);
+        route->setPrefixLength(longestPrefix);
         irt->addRoute(route);
     }
 }
 void AdjacencyManager::disconnectNode(cModule* neighbour) {
-    auto* peerRt = dynamic_cast<IRoutingTable*>(neighbour->findModuleByPath(".generic.routingTable"));
-    // get neighbour ID (when unisphere)
-    L3Address peerID = peerRt->getRouterIdAsGeneric();
-    ASSERT(!peerID.isUnspecified());
+    L3Address peerID = getHostID(neighbour);
 
     IRoute *e = irt->findBestMatchingRoute(peerID);
     while (e != nullptr
