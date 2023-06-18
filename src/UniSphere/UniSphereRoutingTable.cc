@@ -13,6 +13,8 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
+#if false
+
 #include "UniSphereRoutingTable.h"
 
 #include <unordered_map>
@@ -239,3 +241,4 @@ UniSphereRoutingTable::~UniSphereRoutingTable() {
     // TODO Auto-generated destructor stub
 }
 
+#endif

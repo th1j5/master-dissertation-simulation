@@ -27,8 +27,9 @@ UniSphereControlPlane::~UniSphereControlPlane() {
 }
 
 void UniSphereControlPlane::announceOurselves() {
-    // TODO: everything under this has to be reviewed...
     // Announce ourselves to all neighbours and send them routing updates
+    // TODO: everything under this has to be reviewed...
+/*
     Protocol::PathAnnounce announce;
     for (const std::pair<NodeIdentifier, PeerPtr> &peer : m_identity.peers()) {
         PeerPtr peerInfo = peer.second;
@@ -67,4 +68,5 @@ void UniSphereControlPlane::announceOurselves() {
     // Reschedule self announce
     m_announceTimer.expires_from_now(m_context.roughly(CompactRouter::interval_announce));
     m_announceTimer.async_wait(boost::bind(&CompactRouterPrivate::announceOurselves, this, _1));
+*/
 }

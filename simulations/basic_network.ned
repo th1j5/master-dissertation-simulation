@@ -15,8 +15,9 @@
 
 package prototype.simulations;
 
-import inet.networklayer.configurator.ipv4.*;
-import inet.networklayer.configurator.nexthop.*;
+//import inet.networklayer.configurator.ipv4.*;
+//import inet.networklayer.configurator.nexthop.*;
+import inet.networklayer.configurator.contract.*;
 import inet.physicallayer.wireless.common.medium.RadioMedium;
 import inet.physicallayer.wireless.unitdisk.*;
 import inet.visualizer.contract.IIntegratedVisualizer;
@@ -29,7 +30,7 @@ network basic_network {
         visualizer: <default(firstAvailableOrEmpty("IntegratedCanvasVisualizer"))> like IIntegratedVisualizer if typename != "" {
             @display("p=15,35");
         }
-        configurator: Ipv4NetworkConfigurator {
+        configurator: <default("")> like IL3NetworkConfigurator if typename != "" {
             @display("p=15,15");
         }
         radioMedium: UnitDiskRadioMedium {

@@ -31,7 +31,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void initialize(int stage) override {}
     virtual void handleMessageWhenUp(cMessage *msg) override {}
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override {}
-    void announceOurselves();
+    virtual void announceOurselves();
 
     // lifecycle
     virtual void handleStartOperation(inet::LifecycleOperation *operation) override {}

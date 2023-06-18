@@ -21,6 +21,7 @@
 
 #ifndef UNISPHERE_UNISPHEREROUTINGTABLE_H_
 #define UNISPHERE_UNISPHEREROUTINGTABLE_H_
+#ifndef UNISPHERE_UNISPHEREROUTINGTABLE_H_
 
 #include <omnetpp/csimplemodule.h>
 
@@ -246,4 +247,5 @@ class UniSphereRoutingTable: public omnetpp::cSimpleModule {
     LandmarkAddress getLocalAddress() const;
 };
 
+#endif
 #endif /* UNISPHERE_UNISPHEREROUTINGTABLE_H_ */

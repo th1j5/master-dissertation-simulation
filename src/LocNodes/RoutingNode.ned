@@ -24,6 +24,8 @@ import prototype.UniSphere.*;
 // TODO auto-generated module
 //
 module ScalableRouter extends Router {
+    parameters:
+        *.routingTableModule = default("^.generic.routingTable");
     submodules:
         unisphere: UniSphereControlPlane if exists(generic) { // might need an interface: "like IOspf" in inet.routing.contract
             parameters:
@@ -34,6 +36,8 @@ module ScalableRouter extends Router {
         unisphere.networkLayerIn <-- tn.out++ if exists(generic);
 }
 module MobileScalableRouter extends ManetRouter {
+    parameters:
+        *.routingTableModule = default("^.generic.routingTable");
 }
 module NeighbourNode extends ScalableRouter {
     parameters:
