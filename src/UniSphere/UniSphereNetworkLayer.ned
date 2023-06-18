@@ -18,7 +18,9 @@ package prototype.UniSphere;
 import inet.networklayer.nexthop.*;
 
 module UniSphereControlPlane {
-    @class(UniSphereControlPlane);
+    parameters:
+        @class(UniSphereControlPlane);
+        string routingTableModule;
     gates:
         input networkLayerIn;
         output networkLayerOut;

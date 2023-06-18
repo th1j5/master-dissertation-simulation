@@ -17,7 +17,11 @@
 #define UNISPHERE_UNISPHERECONTROLPLANE_H_
 
 #include <omnetpp.h>
+#include "inet/common/ModuleRefByPar.h"
 #include "inet/routing/base/RoutingProtocolBase.h"
+#include "inet/networklayer/contract/IRoutingTable.h"
+#include "inet/common/Protocol.h"
+#include "inet/common/ProtocolGroup.h"
 
 using namespace omnetpp;
 
@@ -27,16 +31,28 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual ~UniSphereControlPlane();
 
   protected:
+    // 200 should be available, see 'networklayer/common/IpProtocolId.msg'
+    static const int protocolId = 200;
+    static const inet::Protocol *unisphere;
+
+    // state
+    cMessage *selfMsg = nullptr;
+    // parameters
+    inet::ModuleRefByPar<inet::IRoutingTable> irt;
+    cGate *peerIn = nullptr;
+    cGate *peerOut = nullptr;
+    const simtime_t interval_announce = 30;
+
     virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-    virtual void initialize(int stage) override {}
-    virtual void handleMessageWhenUp(cMessage *msg) override {}
+    virtual void initialize(int stage) override;
+    virtual void handleMessageWhenUp(cMessage *msg) override;
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override {}
     virtual void announceOurselves();
 
     // lifecycle
-    virtual void handleStartOperation(inet::LifecycleOperation *operation) override {}
-    virtual void handleStopOperation(inet::LifecycleOperation *operation) override {}
-    virtual void handleCrashOperation(inet::LifecycleOperation *operation) override {}
+    virtual void handleStartOperation(inet::LifecycleOperation *operation) override;
+    virtual void handleStopOperation(inet::LifecycleOperation *operation) override { cancelEvent(selfMsg); }
+    virtual void handleCrashOperation(inet::LifecycleOperation *operation) override { cancelEvent(selfMsg); }
 
 };
 
