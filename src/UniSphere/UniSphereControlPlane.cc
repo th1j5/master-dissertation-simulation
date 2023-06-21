@@ -44,7 +44,7 @@ void UniSphereControlPlane::initialize(int stage) {
         selfMsg = new cMessage("announceTimer");
         // get the routing table to update and subscribe it to the blackboard
         irt.reference(this, "routingTableModule", true);
-//        ift.reference(this, "interfaceTableModule", true);
+        ift.reference(this, "interfaceTableModule", true);
         peerIn = gate("networkLayerIn");
         peerOut = gate("networkLayerOut");
         if (!ProtocolGroup::getIpProtocolGroup()->findProtocol(protocolId)) { // one-shot execution
@@ -154,20 +154,19 @@ void UniSphereControlPlane::processPacket(Packet *pkt) {
     // in U-Sphere, this is actually an aggregation of announcements -\_(")_/-
 
     /* Prepare routing entry */
-    L3Address origin = ctrlMessage->getOrigin();
     auto pathSize = ctrlMessage->getForward_pathArraySize();
+    UniSphereRoute *route = new UniSphereRoute();
+    route->setDestination(ctrlMessage->getOrigin());
+    route->setInterface(getSourceInterfaceFrom(pkt)); //TODO: does this mean something for our thesissimulation?? Is it a restriction??
     L3Address vport  = ctrlMessage->getForward_path(pathSize-1); // neighbour who send it
-
-    NextHopRoute *route = new NextHopRoute();
-    route->setDestination(origin);
-//    route->setInterface(iface);
     route->setNextHop(vport);
     // populate forward path?
     // populate reverse path for landmarks?
     route->setMetric(pathSize-1);
+    route->setLandmark(ctrlMessage->getLandmark());
 
     /* attempt to import if better route */
-    bool isImported = importRoute(route, ctrlMessage->getLandmark());
+    bool isImported = importRoute(route);
     if (!isImported)
         delete route;
 
@@ -177,7 +176,7 @@ void UniSphereControlPlane::processPacket(Packet *pkt) {
     delete pkt;
 }
 
-bool UniSphereControlPlane::importRoute(IRoute *newRoute, bool isLandmark) {
+bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
     L3Address origin = newRoute->getDestinationAsGeneric();
     if (origin == getHostID(host))
         return false;
@@ -219,9 +218,9 @@ bool UniSphereControlPlane::importRoute(IRoute *newRoute, bool isLandmark) {
             isVicinity = true;
         }
 
-        if (!isVicinity && !isLandmark)
+        if (!isVicinity && !newRoute->isLandmark())
             return false;
-        irt->addRoute(oldRoute);
+        irt->addRoute(newRoute);
         return true;
     }
     //FIXME mem-leaks

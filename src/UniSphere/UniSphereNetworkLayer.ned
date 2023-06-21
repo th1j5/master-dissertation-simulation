@@ -21,6 +21,7 @@ module UniSphereControlPlane {
     parameters:
         @class(UniSphereControlPlane);
         string routingTableModule;
+        string interfaceTableModule;
     gates:
         input networkLayerIn;
         output networkLayerOut;

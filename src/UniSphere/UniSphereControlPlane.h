@@ -18,11 +18,14 @@
 
 #include <omnetpp.h>
 #include "inet/common/ModuleRefByPar.h"
+#include "inet/common/Protocol.h"
+#include "inet/common/ProtocolGroup.h"
+#include "inet/linklayer/common/InterfaceTag_m.h"
 #include "inet/routing/base/RoutingProtocolBase.h"
 #include "inet/networklayer/contract/IRoutingTable.h"
 #include "inet/networklayer/nexthop/NextHopRoute.h"
-#include "inet/common/Protocol.h"
-#include "inet/common/ProtocolGroup.h"
+
+#include "UniSphereRoute.h"
 
 using namespace omnetpp;
 
@@ -56,6 +59,8 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     // parameters
     cModule *host = nullptr;
     inet::ModuleRefByPar<inet::IRoutingTable> irt;
+    inet::ModuleRefByPar<inet::IInterfaceTable> ift;
+
     cGate *peerIn = nullptr;
     cGate *peerOut = nullptr;
     const simtime_t interval_announce = 30;
@@ -66,9 +71,14 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override {}
     virtual void announceOurselves();
     virtual void processPacket(inet::Packet *pkt);
-    virtual bool importRoute(inet::IRoute *route, bool isLandmark);
+    virtual bool importRoute(UniSphereRoute *route);
     size_t getMaximumVicinitySize() const;
     CurrentVicinity getCurrentVicinity() const;
+
+    inet::NetworkInterface *getSourceInterfaceFrom(inet::Packet *packet) {
+        const auto& interfaceInd = packet->findTag<inet::InterfaceInd>();
+        return interfaceInd != nullptr ? ift->getInterfaceById(interfaceInd->getInterfaceId()) : nullptr;
+    }
 
 
     // lifecycle
