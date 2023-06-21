@@ -54,6 +54,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     // state
     cMessage *selfMsg = nullptr;
     // parameters
+    cModule *host = nullptr;
     inet::ModuleRefByPar<inet::IRoutingTable> irt;
     cGate *peerIn = nullptr;
     cGate *peerOut = nullptr;
@@ -64,6 +65,8 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void handleMessageWhenUp(cMessage *msg) override;
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override {}
     virtual void announceOurselves();
+    virtual void processPacket(inet::Packet *pkt);
+    virtual bool importRoute(inet::IRoute *route, bool isLandmark);
     size_t getMaximumVicinitySize() const;
     CurrentVicinity getCurrentVicinity() const;
 

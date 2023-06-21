@@ -14,6 +14,7 @@
 // 
 
 #include "UniSphereControlPlane.h"
+#include "PathAnnounce_m.h"
 #include "../util.h"
 
 #include "inet/common/ProtocolTag_m.h"
@@ -55,7 +56,7 @@ void UniSphereControlPlane::initialize(int stage) {
     }
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
         // get the hostname
-//        host = getContainingNode(this);
+        host = getContainingNode(this);
     }
 }
 
@@ -69,10 +70,8 @@ void UniSphereControlPlane::handleMessageWhenUp(cMessage *msg) {
         Packet *pkt = check_and_cast<Packet *>(msg);
         auto protocol = pkt->getTag<PacketProtocolTag>()->getProtocol();
         if (protocol == unisphere) {
-            //TODO
-//            processPacket(packet);
             EV_WARN << "Received unisphere packet from network: " << msg->getName() << " (" << msg->getClassName() << ")" << endl;
-            delete msg;
+            processPacket(pkt);
         }
         else
             throw cRuntimeError("U-SphereControlPlane: received unknown packet '%s (%s)' from the network layer.", msg->getName(), msg->getClassName());
@@ -87,8 +86,15 @@ void UniSphereControlPlane::announceOurselves() {
     for (auto peer: getConnectedNodes(irt)) {
         //
         //    check_and_cast<Packet *>(msg)->addTagIfAbsent<DispatchProtocolReq>()->setProtocol(&Protocol::ipv4);
-        Packet *pkt = new Packet();
+        auto payload = makeShared<PathAnnounce>();
+        payload->setChunkLength(B(10)); // FIXME
+        payload->setLandmark(false);
+        payload->setSeqno(0);
+        payload->setOrigin(getHostID(host));
+        // add ourselves to forward path
+        payload->appendForward_path(getHostID(host));
 
+        Packet *pkt = new Packet("PathAnnounce", payload);
         // TODO - see routing/pim/modes/PimSM.cc/sendToIP
         pkt->addTagIfAbsent<PacketProtocolTag>()->setProtocol(unisphere);
         pkt->addTagIfAbsent<DispatchProtocolInd>()->setProtocol(unisphere);
@@ -139,6 +145,86 @@ void UniSphereControlPlane::announceOurselves() {
     m_announceTimer.expires_from_now(m_context.roughly(CompactRouter::interval_announce));
     m_announceTimer.async_wait(boost::bind(&CompactRouterPrivate::announceOurselves, this, _1));
 */
+}
+
+void UniSphereControlPlane::processPacket(Packet *pkt) {
+    auto ctrlMessage = dynamicPtrCast<const PathAnnounce>(pkt->popAtFront());
+    EV_WARN << "Received message" << ctrlMessage << endl;
+    /* social/compact_router.cpp:663 */
+    // in U-Sphere, this is actually an aggregation of announcements -\_(")_/-
+
+    /* Prepare routing entry */
+    L3Address origin = ctrlMessage->getOrigin();
+    auto pathSize = ctrlMessage->getForward_pathArraySize();
+    L3Address vport  = ctrlMessage->getForward_path(pathSize-1); // neighbour who send it
+
+    NextHopRoute *route = new NextHopRoute();
+    route->setDestination(origin);
+//    route->setInterface(iface);
+    route->setNextHop(vport);
+    // populate forward path?
+    // populate reverse path for landmarks?
+    route->setMetric(pathSize-1);
+
+    /* attempt to import if better route */
+    bool isImported = importRoute(route, ctrlMessage->getLandmark());
+    if (!isImported)
+        delete route;
+
+    /* If import results in better route, export this route to all neighbours */
+    //TODO
+
+    delete pkt;
+}
+
+bool UniSphereControlPlane::importRoute(IRoute *newRoute, bool isLandmark) {
+    L3Address origin = newRoute->getDestinationAsGeneric();
+    if (origin == getHostID(host))
+        return false;
+
+    // check if route update has same dest & vport/neighbour
+    // We can put multiple routes in the Table, lowest metric will be chosen
+    // But the question is: do we need/want this? U-Sphere implementation seems to think so, but unclear when actually used
+    NextHopRoute *oldRoute = check_and_cast<NextHopRoute*>(irt->findBestMatchingRoute(origin));
+    if (oldRoute != nullptr && oldRoute->getNextHopAsGeneric() == newRoute->getNextHopAsGeneric()) {
+        ASSERT(oldRoute->getDestinationAsGeneric() == origin);
+        // Ignore import when the existing entry is ... (not applicable here)
+        // (return false) ->
+        // Update certain attributes of the routing entry
+        oldRoute->setMetric(newRoute->getMetric());
+        //TODO Might change bestRoute & returns true in U-Sphere
+        return false; //FIXME
+    }
+    else if (oldRoute != nullptr) {
+        // has different NextHop, what to do?
+        return false; //FIXME
+    }
+    else {
+        // An entry should be inserted if it represents a landmark or if it falls into the vicinity
+        // or the extended vicinity (based on sloppy group membership) of the current node
+        bool isVicinity = false;
+        CurrentVicinity vicinity = getCurrentVicinity();
+
+        if (vicinity.size >= getMaximumVicinitySize()) {
+            if (vicinity.maxHopEntry->getMetric() > newRoute->getMetric()) {
+                // In vicinity, but we might need to retract an entry if it isn't in any bucket
+                isVicinity = true;
+                //FIXME!!!
+//                vicinity.maxHopEntry->setLandmark();
+            }
+            // Else: not part of vicinity, but might be part of sloppy group
+            // Unimplemented
+        } else {
+            // Inside vicinity as it is not yet full
+            isVicinity = true;
+        }
+
+        if (!isVicinity && !isLandmark)
+            return false;
+        irt->addRoute(oldRoute);
+        return true;
+    }
+    //FIXME mem-leaks
 }
 
 size_t UniSphereControlPlane::getMaximumVicinitySize() const

@@ -48,6 +48,13 @@ module MobileScalableRouter extends ManetRouter {
             parameters:
                 @display("p=125,320");
         }
+        unisphere: UniSphereControlPlane if exists(generic) { // might need an interface: "like IOspf" in inet.routing.contract
+            parameters:
+                @display("p=975,226");
+        }
+    connections:
+        unisphere.networkLayerOut --> tn.in++ if exists(generic);
+        unisphere.networkLayerIn <-- tn.out++ if exists(generic);
 }
 module NeighbourNode extends ScalableRouter {
     parameters:
