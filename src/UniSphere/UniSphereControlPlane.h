@@ -20,12 +20,28 @@
 #include "inet/common/ModuleRefByPar.h"
 #include "inet/routing/base/RoutingProtocolBase.h"
 #include "inet/networklayer/contract/IRoutingTable.h"
+#include "inet/networklayer/nexthop/NextHopRoute.h"
 #include "inet/common/Protocol.h"
 #include "inet/common/ProtocolGroup.h"
 
 using namespace omnetpp;
 
 class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp::cListener {
+  private:
+    /**
+     * Current vicinity descriptor.
+     */
+    struct CurrentVicinity {
+      /// Current vicinity size
+      size_t size;
+      /// Routing entry with the largest hop count within the vicinity
+      /// (retract candidate in case of overflows)
+      inet::NextHopRoute* maxHopEntry;
+      /// Iterator pointing to the maxHopEntry
+//      RoutingInformationBase::index<RIBTags::Vicinity>::type::iterator maxHopIterator;
+    };
+
+
   public:
     UniSphereControlPlane();
     virtual ~UniSphereControlPlane();
@@ -48,6 +64,9 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void handleMessageWhenUp(cMessage *msg) override;
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override {}
     virtual void announceOurselves();
+    size_t getMaximumVicinitySize() const;
+    CurrentVicinity getCurrentVicinity() const;
+
 
     // lifecycle
     virtual void handleStartOperation(inet::LifecycleOperation *operation) override;

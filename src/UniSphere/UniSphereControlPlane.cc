@@ -141,6 +141,31 @@ void UniSphereControlPlane::announceOurselves() {
 */
 }
 
+size_t UniSphereControlPlane::getMaximumVicinitySize() const
+{
+    // TODO: This is probably not the best way (int -> double -> sqrt -> int)
+    int networkSize = getNetworkSize();
+    double n = static_cast<double>(networkSize);
+    size_t maxVicinitySize = static_cast<size_t>(std::sqrt(n * std::log(n)));
+    EV_WARN << "Vicinity estimate: " << maxVicinitySize << endl;
+    return maxVicinitySize;
+}
+
+UniSphereControlPlane::CurrentVicinity UniSphereControlPlane::getCurrentVicinity() const {
+    // get entries which are: active && inVicinity (&& !extendedVicinity ?)
+    // ASSUMPTION: all entries in RT are active && inVicinity (and no extendedVicinity is used)
+    CurrentVicinity vicinity;
+    vicinity.size = irt->getNumRoutes();
+
+    for (int i = 0; i < vicinity.size; ++i) {
+        IRoute *e = irt->getRoute(i);
+        if (vicinity.maxHopEntry != nullptr && e->getMetric() > vicinity.maxHopEntry->getMetric())
+            vicinity.maxHopEntry = check_and_cast<NextHopRoute*>(e);
+    }
+
+    return vicinity;
+}
+
 void UniSphereControlPlane::handleStartOperation(LifecycleOperation *operation) {
     simtime_t start = simTime(); // std::max(startTime
     scheduleAt(start, selfMsg);

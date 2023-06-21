@@ -42,4 +42,44 @@ static std::vector<cModule*> getConnectedNodes(inet::ModuleRefByPar<inet::IRouti
     return nodes;
 }
 
+// copy from 'inet/common/Topology.cc'
+static bool selectByProperty(cModule *mod, void *data)
+{
+    struct ParamData {
+        const char *name;
+        const char *value;
+    };
+    ParamData *d = (ParamData *)data;
+    cProperty *prop = mod->getProperties()->get(d->name);
+    if (!prop)
+        return false;
+    const char *value = prop->getValue(cProperty::DEFAULTKEY, 0);
+    if (d->value)
+        return opp_strcmp(value, d->value) == 0;
+    else
+        return opp_strcmp(value, "false") != 0;
+}
+
+static int getNetworkSize() {
+    // Oracle network size estimator (see U-Sphere paper)
+    bool (*predicate)(cModule *, void *);
+    predicate = selectByProperty;
+    struct {
+        const char *name;
+        const char *value;
+    } data = {
+        "networkNode", nullptr
+    };
+    int networkSize = 0;
+
+    for (int modId = 0; modId <= getSimulation()->getLastComponentId(); modId++) {
+        cModule *module = getSimulation()->getModule(modId);
+        if (module && predicate(module, (void*)&data)) {
+            networkSize++;
+        }
+    }
+    EV_DEBUG << "Network estimate: " << networkSize << endl;
+    return networkSize;
+}
+
 #endif /* UTIL_H_ */
