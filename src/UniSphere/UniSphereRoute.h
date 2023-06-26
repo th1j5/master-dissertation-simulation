@@ -35,7 +35,12 @@ class UniSphereRoute: public inet::NextHopRoute {
     RoutingPath reversePath;
     virtual void setLandmark(bool isLandmark) { this->landmark = isLandmark; }
     virtual bool isLandmark() { return landmark; }
+
+    virtual inet::Ptr<PathAnnounce> exportEntry();
+
     UniSphereRoute() {}
+    UniSphereRoute(inet::Ptr<const PathAnnounce> pkt);
+    UniSphereRoute(inet::L3Address neighbour);
     virtual ~UniSphereRoute() {}
 };
 

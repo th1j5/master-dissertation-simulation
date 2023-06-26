@@ -14,6 +14,7 @@
 // 
 
 #include "AdjacencyManager.h"
+#include "../UniSphere/UniSphereRoute.h"
 #include "../util.h"
 #include "inet/networklayer/nexthop/NextHopRoute.h"
 #include "inet/networklayer/nexthop/NextHopRoutingTable.h"
@@ -85,13 +86,13 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
         routeAlreadyPresent = true;
 
     if (!routeAlreadyPresent) {
-        NextHopRoute* route = new NextHopRoute();
-        route->setDestination(peerID);
+        UniSphereRoute* route = new UniSphereRoute(peerID);
         route->setInterface(iface);
-        route->setNextHop(peerID);
-        route->setMetric(0);
-    //                    route->setAdminDist(inet::IRoute::RouteAdminDist::dDirectlyConnected); // only IPv4
-        route->setPrefixLength(longestPrefix);
+//        route->setLandmark()
+//        route->vicinity = true;
+//        route->forwardPath = ;
+//                    route->setAdminDist(inet::IRoute::RouteAdminDist::dDirectlyConnected); // only IPv4
+//        route->setPrefixLength(longestPrefix);
         irt->addRoute(route);
     }
 }
