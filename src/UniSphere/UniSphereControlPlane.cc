@@ -23,6 +23,7 @@
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/networklayer/common/L3AddressTag_m.h"
 #include "inet/networklayer/common/HopLimitTag_m.h"
+#include "inet/networklayer/nexthop/NextHopRoutingTable.h"
 
 using namespace inet; // more OK to use in .cc
 Define_Module(UniSphereControlPlane);
@@ -36,17 +37,20 @@ UniSphereControlPlane::UniSphereControlPlane() {
 
 UniSphereControlPlane::~UniSphereControlPlane() {
     cancelAndDelete(selfMsg);
+    delete selfAnnounce;
 }
 
 void UniSphereControlPlane::initialize(int stage) {
     RoutingProtocolBase::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
         selfMsg = new cMessage("announceTimer");
+
         // get the routing table to update and subscribe it to the blackboard
         irt.reference(this, "routingTableModule", true);
         ift.reference(this, "interfaceTableModule", true);
         peerIn = gate("networkLayerIn");
         peerOut = gate("networkLayerOut");
+
         if (!ProtocolGroup::getIpProtocolGroup()->findProtocol(protocolId)) { // one-shot execution
             ProtocolGroup::getIpProtocolGroup()->addProtocol(protocolId, unisphere);
         }
@@ -57,6 +61,11 @@ void UniSphereControlPlane::initialize(int stage) {
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
         // get the hostname
         host = getContainingNode(this);
+        selfAnnounce = new UniSphereRoute();
+        selfAnnounce->setDestination(getHostID(host));
+        selfAnnounce->setLandmark(false); // FIXME: adjust to U-Sphere specs
+        selfAnnounce->setRoutingTable(check_and_cast<NextHopRoutingTable *>(irt.get())); // grant access to this host
+        // Other default values??
     }
 }
 
@@ -81,70 +90,24 @@ void UniSphereControlPlane::handleMessageWhenUp(cMessage *msg) {
 }
 
 void UniSphereControlPlane::announceOurselves() {
-    short ttl = 1;
     // Announce ourselves to all neighbours and send them routing updates
     for (auto peer: getConnectedNodes(irt)) {
-        //
-        //    check_and_cast<Packet *>(msg)->addTagIfAbsent<DispatchProtocolReq>()->setProtocol(&Protocol::ipv4);
-        auto payload = makeShared<PathAnnounce>();
-        payload->setChunkLength(B(10)); // FIXME
-        payload->setLandmark(false);
-        payload->setSeqno(0);
-        payload->setOrigin(getHostID(host));
+//        auto payload = makeShared<PathAnnounce>();
+//        selfAnnounce->seqno++; //FIXME: seqno not updated in U-Sphere???
+//        payload->setChunkLength(B(10)); // FIXME
+//        payload->setLandmark(false);
+//        payload->setSeqno(0);
+//        payload->setOrigin(getHostID(host));
         // add ourselves to forward path
-        payload->appendForward_path(getHostID(host));
-
-        Packet *pkt = new Packet("PathAnnounce", payload);
-        // TODO - see routing/pim/modes/PimSM.cc/sendToIP
-        pkt->addTagIfAbsent<PacketProtocolTag>()->setProtocol(unisphere);
-        pkt->addTagIfAbsent<DispatchProtocolInd>()->setProtocol(unisphere);
-        pkt->addTagIfAbsent<DispatchProtocolReq>()->setProtocol(&Protocol::nextHopForwarding);
-        pkt->addTagIfAbsent<L3AddressReq>()->setDestAddress(getHostID(peer));
-        pkt->addTagIfAbsent<HopLimitReq>()->setHopLimit(ttl);
-        send(pkt, peerOut);
-    }
-    scheduleAfter(interval_announce, selfMsg);
-
-/* TODO: everything under this has to be reviewed...
-    Protocol::PathAnnounce announce;
-    for (const std::pair<NodeIdentifier, PeerPtr> &peer : m_identity.peers()) {
-        PeerPtr peerInfo = peer.second;
-        // Get a security association for this link to setup delegations
-        PeerSecurityAssociationPtr sa = peerInfo->selectPeerSecurityAssociation(m_context);
-        if (!sa) {
-            // TODO: Rate limit transmission of SA_Flush
-            m_manager.send(peerInfo->contact(),
-              Message(Message::Type::Social_SA_Flush, Protocol::SecurityAssociationFlush()));
-            m_statistics.saUpdateXmits++;
-            continue;
-        }
-
-        announce.Clear();
-        announce.set_public_key(m_identity.localKey().raw());
-        announce.set_landmark(m_routes.isLandmark());
-        if (m_routes.isLandmark()) {
-            // Get/assign the outgoing vport for this announcement
-            Vport vport = m_routes.getVportForNeighbor(peer.first);
-            announce.add_reverse_path(vport);
-        }
-
-        // Construct the delegation message
-        Protocol::PathDelegation delegation;
-        delegation.set_delegation(sa->raw());
-        // TODO: Include reverse vport in signature
-        announce.add_delegation_chain(m_identity.localKey().privateSignSubkey().sign(delegation));
-
-        announce.set_seqno(m_seqno);
-        ribExportQueueAnnounce(peerInfo->contact(), announce);
+//        payload->appendForward_path(getHostID(host));
+        auto payload = selfAnnounce->exportEntry();
+        ASSERT(payload->getOrigin() == payload->getForward_path().back());
+        sendToNeighbour(getHostID(peer), payload);
 
         // Send full routing table to neighbor
-        m_routes.fullUpdate(peer.first);
+        //fullUpdate(getHostID(peer));
     }
-
-    // Reschedule self announce
-    m_announceTimer.expires_from_now(m_context.roughly(CompactRouter::interval_announce));
-    m_announceTimer.async_wait(boost::bind(&CompactRouterPrivate::announceOurselves, this, _1));
-*/
+    scheduleAfter(interval_announce, selfMsg);
 }
 
 void UniSphereControlPlane::processPacket(Packet *pkt) {

@@ -56,6 +56,8 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
 
     // state
     cMessage *selfMsg = nullptr;
+    UniSphereRoute *selfAnnounce = nullptr;
+
     // parameters
     cModule *host = nullptr;
     inet::ModuleRefByPar<inet::IRoutingTable> irt;
