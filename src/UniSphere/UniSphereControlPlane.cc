@@ -117,16 +117,8 @@ void UniSphereControlPlane::processPacket(Packet *pkt) {
     // in U-Sphere, this is actually an aggregation of announcements -\_(")_/-
 
     /* Prepare routing entry */
-    auto pathSize = ctrlMessage->getForward_pathArraySize();
-    UniSphereRoute *route = new UniSphereRoute();
-    route->setDestination(ctrlMessage->getOrigin());
+    UniSphereRoute *route = new UniSphereRoute(ctrlMessage);
     route->setInterface(getSourceInterfaceFrom(pkt)); //TODO: does this mean something for our thesissimulation?? Is it a restriction??
-    L3Address vport  = ctrlMessage->getForward_path(pathSize-1); // neighbour who send it
-    route->setNextHop(vport);
-    // populate forward path?
-    // populate reverse path for landmarks?
-    route->setMetric(pathSize-1);
-    route->setLandmark(ctrlMessage->getLandmark());
 
     /* attempt to import if better route */
     bool isImported = importRoute(route);
