@@ -186,7 +186,18 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
         irt->addRoute(newRoute);
         return true;
     }
-    //FIXME mem-leaks
+    //FIXME mem-leaks?
+}
+
+bool UniSphereControlPlane::retract(L3Address dest) {
+    int numDeleted = 0;
+    while (IRoute* e = irt->findBestMatchingRoute(dest)) {
+        ASSERT(e->getDestinationAsGeneric() == dest);
+        irt->deleteRoute(e);
+        numDeleted++;
+    }
+    // TODO: send retract entry signals
+    return numDeleted > 0;
 }
 
 size_t UniSphereControlPlane::getMaximumVicinitySize() const

@@ -74,6 +74,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void announceOurselves();
     virtual void processPacket(inet::Packet *pkt);
     virtual bool importRoute(UniSphereRoute *route);
+    virtual bool retract(inet::L3Address dest);
     size_t getMaximumVicinitySize() const;
     CurrentVicinity getCurrentVicinity() const;
     virtual void sendToNeighbour(inet::L3Address neigbour, inet::Ptr<PathAnnounce> payload); // == ribExportQueueAnnounce in U-Sphere
