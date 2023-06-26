@@ -15,6 +15,9 @@
 static inet::L3Address getHostID(cModule* host) {
     // FIXME problematic code
     auto* peerRt = dynamic_cast<inet::IRoutingTable*>(host->findModuleByPath(".generic.routingTable"));
+    if (peerRt == nullptr)
+        peerRt = dynamic_cast<inet::IRoutingTable*>(host->findModuleByPath(".ipv4.routingTable"));
+    ASSERT(peerRt != nullptr);
     // get neighbour ID (when unisphere)
     inet::L3Address peerID = peerRt->getRouterIdAsGeneric();
     ASSERT(!peerID.isUnspecified());
