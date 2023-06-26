@@ -18,14 +18,26 @@ import inet.networklayer.common.L3Address;
 //
 // TODO generated message class
 //
+cplusplus {{
+typedef std::list<inet::L3Address> RoutingPath;
+}}
+
 enum MessageType {
     SOCIALANNOUNCE = 1;
     // should we do it this way? see Message::Type:: in U-Sphere
 }
+class RoutingPath {
+    @existingClass;
+    // Would be needed to silence warning, only import for the descriptor class
+    // https://doc.omnetpp.org/omnetpp/manual/#sec:msg-defs:descriptor-classes
+//    @toValue(.str());  // use IPAddress::str() to produce a string
+//    @fromValue(IPAddress($));  // use constructor; '$' will be replaced by the string
+}
+
 class PathAnnounce extends inet::FieldsChunk {
     inet::L3Address origin;			// Originator ID (public key in U-Sphere)
-    inet::L3Address forward_path[];	// Forward path
-//  repeated uint32 reverse_path;	// Reverse path (included only for landmark announces)
+    RoutingPath forward_path @byValue;	// Forward path
+    RoutingPath reverse_path @byValue;	// Reverse path (included only for landmark announces)
     bool landmark;					// Landmark status of the origin
     uint32 seqno;					// Sequence number
     // Cryptographic path delegation chain

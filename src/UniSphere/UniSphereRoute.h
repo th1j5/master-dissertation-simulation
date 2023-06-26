@@ -20,12 +20,19 @@
 
 #include "inet/networklayer/nexthop/NextHopRoute.h"
 
+#include "PathAnnounce_m.h" // defines RoutingPath
+
 using namespace omnetpp;
 
 class UniSphereRoute: public inet::NextHopRoute {
   private:
     bool landmark = false;
   public:
+    bool active = false;
+    bool vicinity = false;
+    uint32_t seqno = 0;
+    RoutingPath forwardPath;
+    RoutingPath reversePath;
     virtual void setLandmark(bool isLandmark) { this->landmark = isLandmark; }
     virtual bool isLandmark() { return landmark; }
     UniSphereRoute() {}
