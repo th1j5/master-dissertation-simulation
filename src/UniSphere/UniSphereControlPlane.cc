@@ -251,6 +251,19 @@ UniSphereControlPlane::CurrentVicinity UniSphereControlPlane::getCurrentVicinity
     return vicinity;
 }
 
+void UniSphereControlPlane::sendToNeighbour(L3Address neighbour, inet::Ptr<PathAnnounce> payload) {
+    // could buffer before sending (see U-Sphere, CompactRouterPrivate::ribExportQueueAnnounce)
+    short ttl = 1;
+    Packet *pkt = new Packet("PathAnnounce", payload);
+    // TODO - see routing/pim/modes/PimSM.cc/sendToIP
+    pkt->addTagIfAbsent<PacketProtocolTag>()->setProtocol(unisphere);
+    pkt->addTagIfAbsent<DispatchProtocolInd>()->setProtocol(unisphere);
+    pkt->addTagIfAbsent<DispatchProtocolReq>()->setProtocol(&Protocol::nextHopForwarding);
+    pkt->addTagIfAbsent<L3AddressReq>()->setDestAddress(neighbour);
+    pkt->addTagIfAbsent<HopLimitReq>()->setHopLimit(ttl);
+    send(pkt, peerOut);
+}
+
 void UniSphereControlPlane::handleStartOperation(LifecycleOperation *operation) {
     simtime_t start = simTime(); // std::max(startTime
     scheduleAt(start, selfMsg);
