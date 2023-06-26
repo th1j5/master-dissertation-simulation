@@ -39,7 +39,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
       size_t size;
       /// Routing entry with the largest hop count within the vicinity
       /// (retract candidate in case of overflows)
-      inet::NextHopRoute* maxHopEntry;
+      UniSphereRoute* maxHopEntry;
       /// Iterator pointing to the maxHopEntry
 //      RoutingInformationBase::index<RIBTags::Vicinity>::type::iterator maxHopIterator;
     };
