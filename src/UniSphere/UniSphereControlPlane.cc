@@ -92,20 +92,13 @@ void UniSphereControlPlane::handleMessageWhenUp(cMessage *msg) {
 void UniSphereControlPlane::announceOurselves() {
     // Announce ourselves to all neighbours and send them routing updates
     for (auto peer: getConnectedNodes(irt)) {
-//        auto payload = makeShared<PathAnnounce>();
 //        selfAnnounce->seqno++; //FIXME: seqno not updated in U-Sphere???
-//        payload->setChunkLength(B(10)); // FIXME
-//        payload->setLandmark(false);
-//        payload->setSeqno(0);
-//        payload->setOrigin(getHostID(host));
-        // add ourselves to forward path
-//        payload->appendForward_path(getHostID(host));
         auto payload = selfAnnounce->exportEntry();
         ASSERT(payload->getOrigin() == payload->getForward_path().back());
         sendToNeighbour(getHostID(peer), payload);
 
         // Send full routing table to neighbor
-        //fullUpdate(getHostID(peer));
+        fullUpdate(getHostID(peer));
     }
     scheduleAfter(interval_announce, selfMsg);
 }
@@ -121,12 +114,23 @@ void UniSphereControlPlane::processPacket(Packet *pkt) {
     route->setInterface(getSourceInterfaceFrom(pkt)); //TODO: does this mean something for our thesissimulation?? Is it a restriction??
 
     /* attempt to import if better route */
+    // in U-Sphere, a route can be imported, even if it's not better TODO
     bool isImported = importRoute(route);
     if (!isImported)
         delete route;
 
     /* If import results in better route, export this route to all neighbours */
     //TODO
+    if (isImported) {
+
+        for (auto peer: getConnectedNodes(irt)) {
+//            auto payload = staticPtrCast<PathAnnounce>(ctrlMessage->dupShared()); //FIXME dupShared()??
+//            payload->setChunkLength(payload->getChunkLength()+B(1)); // FIXME
+//            payload->appendForward_path(getHostID(host)); // add ourselves to forward path
+
+            sendToNeighbourProtected(getHostID(peer), route);
+        }
+    }
 
     delete pkt;
 }
@@ -192,6 +196,15 @@ bool UniSphereControlPlane::retract(L3Address dest) {
     return numDeleted > 0;
 }
 
+void UniSphereControlPlane::fullUpdate(L3Address neighbour) {
+    for (int i = 0; i < irt->getNumRoutes(); ++i) {
+        auto *e = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
+        if (e->active) {
+            sendToNeighbourProtected(neighbour, e);
+        }
+    }
+}
+
 size_t UniSphereControlPlane::getMaximumVicinitySize() const
 {
     // TODO: This is probably not the best way (int -> double -> sqrt -> int)
@@ -221,6 +234,16 @@ UniSphereControlPlane::CurrentVicinity UniSphereControlPlane::getCurrentVicinity
     return vicinity;
 }
 
+bool UniSphereControlPlane::sendToNeighbourProtected(L3Address neighbour, UniSphereRoute* entry) {
+    auto payload = entry->exportEntry();
+    // Retrieve ID(vport in U-Sphere) for given peer
+    // & don't send if the entry is originally coming from that neighbour
+    if (neighbour == entry->getNextHopAsGeneric())
+        return false;
+
+    sendToNeighbour(neighbour, payload);
+    return true;
+}
 void UniSphereControlPlane::sendToNeighbour(L3Address neighbour, inet::Ptr<PathAnnounce> payload) {
     // could buffer before sending (see U-Sphere, CompactRouterPrivate::ribExportQueueAnnounce)
     short ttl = 1;

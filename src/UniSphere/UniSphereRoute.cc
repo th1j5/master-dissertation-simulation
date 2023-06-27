@@ -50,6 +50,7 @@ Ptr<PathAnnounce> UniSphereRoute::exportEntry() {
     payload->setSeqno(seqno); // FIXME
 
     //FIXME: check that paths are correctly constructed
+    // add ourselves to forward path
     cModule *host = getContainingNode(check_and_cast<cModule*>(getRoutingTableAsGeneric()));
     RoutingPath prependedForwardPath = RoutingPath(forwardPath);
     prependedForwardPath.push_front(getHostID(host));

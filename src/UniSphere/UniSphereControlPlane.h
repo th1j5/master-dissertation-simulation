@@ -77,7 +77,9 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual bool retract(inet::L3Address dest);
     size_t getMaximumVicinitySize() const;
     CurrentVicinity getCurrentVicinity() const;
+    virtual bool sendToNeighbourProtected(inet::L3Address neigbour, UniSphereRoute* entry);
     virtual void sendToNeighbour(inet::L3Address neigbour, inet::Ptr<PathAnnounce> payload); // == ribExportQueueAnnounce in U-Sphere
+    void fullUpdate(inet::L3Address neighbour);
 
     inet::NetworkInterface *getSourceInterfaceFrom(inet::Packet *packet) {
         const auto& interfaceInd = packet->findTag<inet::InterfaceInd>();
