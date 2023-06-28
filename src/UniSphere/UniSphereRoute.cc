@@ -63,3 +63,16 @@ Ptr<PathAnnounce> UniSphereRoute::exportEntry() {
 
     return payload;
 }
+
+std::string UniSphereRoute::str() const {
+    std::stringstream out;
+
+    out << (landmark ? "L" : "..");
+    out << (active   ? "A" : "..");
+    out << (vicinity ? "V" : "..") << " ";
+    out << "seq:" << seqno << " ";
+
+    out << NextHopRoute::str();
+
+    return out.str();
+}

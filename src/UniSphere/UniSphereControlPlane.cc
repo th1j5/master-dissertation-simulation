@@ -62,9 +62,13 @@ void UniSphereControlPlane::initialize(int stage) {
         // get the hostname
         host = getContainingNode(this);
         selfAnnounce = new UniSphereRoute();
+
+        // init ourselves
         selfAnnounce->setDestination(getHostID(host));
         selfAnnounce->setLandmark(false); // FIXME: adjust to U-Sphere specs
         selfAnnounce->setRoutingTable(check_and_cast<NextHopRoutingTable *>(irt.get())); // grant access to this host
+        WATCH(selfAnnounce);
+        WATCH_PTR(selfAnnounce);
         // Other default values??
     }
 }

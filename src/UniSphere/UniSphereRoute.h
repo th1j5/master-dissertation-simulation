@@ -47,6 +47,13 @@ class UniSphereRoute: public inet::NextHopRoute {
     UniSphereRoute(inet::Ptr<const PathAnnounce> pkt);
     UniSphereRoute(inet::L3Address neighbour);
     virtual ~UniSphereRoute() {}
+    virtual std::string str() const override;
+};
+
+static std::ostream& operator<<(std::ostream& os, const UniSphereRoute& e) {
+    // https://github.com/omnetpp/omnetpp/issues/1000
+    os << "LOLLLLLLLL";
+    return os;
 };
 
 #endif /* UNISPHERE_UNISPHEREROUTE_H_ */
