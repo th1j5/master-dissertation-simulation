@@ -135,27 +135,43 @@ void UniSphereControlPlane::processPacket(Packet *pkt) {
     delete pkt;
 }
 
+/* @return bool is the new route imported?*/
 bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
     L3Address origin = newRoute->getDestinationAsGeneric();
-    if (origin == getHostID(host))
+    if (origin == getHostID(host)) {
+        EV_WARN << "Got a message about myself (=loop), discarding" << newRoute << endl;
         return false;
+    }
 
     // check if route update has same dest & vport/neighbour
     // We can put multiple routes in the Table, lowest metric will be chosen
     // But the question is: do we need/want this? U-Sphere implementation seems to think so, but unclear when actually used
-    NextHopRoute *oldRoute = check_and_cast<NextHopRoute*>(irt->findBestMatchingRoute(origin));
+    UniSphereRoute *oldRoute = check_and_cast_nullable<UniSphereRoute*>(irt->findBestMatchingRoute(origin));
     if (oldRoute != nullptr && oldRoute->getNextHopAsGeneric() == newRoute->getNextHopAsGeneric()) {
         ASSERT(oldRoute->getDestinationAsGeneric() == origin);
-        // Ignore import when the existing entry is ... (not applicable here)
-        // (return false) ->
+        // Ignore import when the existing entry is ... (U-Sphere, not applicable here)
+        //return false; // U-Sphere
+
         // Update certain attributes of the routing entry
-        oldRoute->setMetric(newRoute->getMetric());
+        ASSERT2(oldRoute->isLandmark() == newRoute->isLandmark(), "Landmark status has changed, check this case");
+
+        // EITHER: it was active
+        // OR it is an uninitialized neighbour
+        // IF NOT: then we have non-active routes in our system being updated...
+        ASSERT(oldRoute->active || isUnitializedNeighbour(oldRoute));
+        newRoute->active = oldRoute->active;
+        newRoute->vicinity = oldRoute->vicinity;
+        if (isUnitializedNeighbour(oldRoute)) {
+            //FIXME: might violate some primitives, because the procedure for route insertion is not respected.
+            //SOLUTION: let even the AdjManager import routes using this procedure?
+            // Even without some needed information (like landmark status?)
+            newRoute->active = true;
+            newRoute->vicinity = true;
+        }
+        irt->addRoute(newRoute);
+        irt->deleteRoute(oldRoute);
         //TODO Might change bestRoute & returns true in U-Sphere
-        return false; //FIXME
-    }
-    else if (oldRoute != nullptr) {
-        // has different NextHop, what to do?
-        return false; //FIXME
+        return true; //FIXME
     }
     else {
         // An entry should be inserted if it represents a landmark or if it falls into the vicinity
