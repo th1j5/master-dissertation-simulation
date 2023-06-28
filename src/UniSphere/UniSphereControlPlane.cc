@@ -183,10 +183,9 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
             newRoute->active = true;
             newRoute->vicinity = true;
         }
-        irt->addRoute(newRoute);
         irt->deleteRoute(oldRoute);
+        oldRoute = nullptr; // importNewRoute WILL succeed
         //TODO Might change bestRoute & returns true in U-Sphere
-        return true; //FIXME
     }
     else {
         // An entry should be inserted if it represents a landmark or if it falls into the vicinity
@@ -225,14 +224,19 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
 
         newRoute->vicinity = isVicinity;
         //irt->addRoute(newRoute); // do this here OR in keepBestRoute()
-
-        //TODO: very different in semantics from selectBestRoute
-        // (sBR has triggers in itself AND keeps old entries, just deactivates them)
-        bool importedNewRoute = keepBestRoute(newRoute, oldRoute);
-        // selectLocalAddress()
-        return importedNewRoute;
     }
-    //FIXME mem-leaks?
+    // TODO: very different in semantics from selectBestRoute
+    // (sBR has triggers in itself AND keeps old entries, just deactivates them)
+    bool importedNewRoute = keepBestRoute(newRoute, oldRoute);
+    if (true && landmarkChangedType)
+        // Landmark type of the currently active route has changed
+        /*TODO?*/;
+
+    // Determine whether local address has changed
+    if (newRoute->isLandmark() || landmarkChangedType)
+        selectLocalAddress();
+
+    return importedNewRoute;
 }
 
 bool UniSphereControlPlane::keepBestRoute(UniSphereRoute* newRoute, UniSphereRoute* oldRoute) {

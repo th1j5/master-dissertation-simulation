@@ -82,6 +82,8 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void sendToNeighbour(inet::L3Address neigbour, inet::Ptr<PathAnnounce> payload); // == ribExportQueueAnnounce in U-Sphere
     void fullUpdate(inet::L3Address neighbour);
 
+    virtual bool selectLocalAddress() { return false; }
+
     virtual void networkSizeEstimateChanged(int size);
     inet::NetworkInterface *getSourceInterfaceFrom(inet::Packet *packet) {
         const auto& interfaceInd = packet->findTag<inet::InterfaceInd>();
