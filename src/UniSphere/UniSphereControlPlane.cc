@@ -65,10 +65,13 @@ void UniSphereControlPlane::initialize(int stage) {
 
         // init ourselves
         selfAnnounce->setDestination(getHostID(host));
-        selfAnnounce->setLandmark(false); // FIXME: adjust to U-Sphere specs
+        selfAnnounce->setLandmark(false); // see networkSizeEstimateChanged
         selfAnnounce->setRoutingTable(check_and_cast<NextHopRoutingTable *>(irt.get())); // grant access to this host
         WATCH(selfAnnounce);
         WATCH_PTR(selfAnnounce);
+
+        // Compute whether we should become a landmark or not
+        networkSizeEstimateChanged(getNetworkSize());
         // Other default values??
     }
 }
@@ -147,6 +150,8 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
         return false;
     }
 
+    bool landmarkChangedType = false;
+
     // check if route update has same dest & vport/neighbour
     // We can put multiple routes in the Table, lowest metric will be chosen
     // But the question is: do we need/want this? U-Sphere implementation seems to think so, but unclear when actually used
@@ -157,7 +162,13 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
         //return false; // U-Sphere
 
         // Update certain attributes of the routing entry
-        ASSERT2(oldRoute->isLandmark() == newRoute->isLandmark(), "Landmark status has changed, check this case");
+        ASSERT2(oldRoute->isLandmark() && !newRoute->isLandmark(), "Landmark status has dropped, should not be possible when the network size doesn't change");
+        if (oldRoute->isLandmark() != newRoute->isLandmark())
+          landmarkChangedType = true;
+
+        // TODO: In some cases modification can cause the entry to be retracted; for example
+        // when it is no longer a landmark and it doesn't fall into the (extended) vicinity
+
 
         // EITHER: it was active
         // OR it is an uninitialized neighbour
@@ -308,6 +319,19 @@ void UniSphereControlPlane::sendToNeighbour(L3Address neighbour, inet::Ptr<PathA
     pkt->addTagIfAbsent<L3AddressReq>()->setDestAddress(neighbour);
     pkt->addTagIfAbsent<HopLimitReq>()->setHopLimit(ttl);
     send(pkt, peerOut);
+}
+
+void UniSphereControlPlane::networkSizeEstimateChanged(int size) {
+    // Re-evaluate network size and check if we should alter our landmark status
+    // U-Sphere: std::generate_canonical<double, 32>(m_manager.context().basicRng());
+    double x = dblrand();
+    double n = static_cast<double>(size);
+
+    // TODO: Only flip landmark status if size has changed by at least a factor 2
+    if (x < std::sqrt(std::log(n) / n)) {
+      EV_WARN << "Becoming a LANDMARK." << endl;
+      selfAnnounce->setLandmark(true);
+    }
 }
 
 void UniSphereControlPlane::handleStartOperation(LifecycleOperation *operation) {
