@@ -162,7 +162,7 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
         //return false; // U-Sphere
 
         // Update certain attributes of the routing entry
-        ASSERT2(oldRoute->isLandmark() && !newRoute->isLandmark(), "Landmark status has dropped, should not be possible when the network size doesn't change");
+        ASSERT2(!(oldRoute->isLandmark() && !newRoute->isLandmark()), "Landmark status has dropped, should not be possible when the network size doesn't change");
         if (oldRoute->isLandmark() != newRoute->isLandmark())
           landmarkChangedType = true;
 
