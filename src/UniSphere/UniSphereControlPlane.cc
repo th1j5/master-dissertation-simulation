@@ -180,9 +180,21 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
         CurrentVicinity vicinity = getCurrentVicinity();
 
         if (vicinity.size >= getMaximumVicinitySize()) {
+            if (vicinity.maxHopEntry->getMetric() == 0) {
+                EV_WARN << "We have a local star-topology, where there are more neighbours than places in the RT." << endl;
+                if (newRoute->getMetric() == 0) {
+                    EV_WARN << "Even some neighbour entries are not accepted." << endl;
+                    ASSERT(false); // should not be possible to be both neighbour & new, due to our approach in OMNeT
+                }
+            }
             if (vicinity.maxHopEntry->getMetric() > newRoute->getMetric()) {
                 // In vicinity, but we might need to retract an entry if it isn't in any bucket
                 isVicinity = true;
+                if(vicinity.maxHopEntry->isLandmark()) {
+                    vicinity.maxHopEntry->vicinity = false;
+                } else {
+                    retract(vicinity.maxHopEntry->getDestinationAsGeneric());
+                }
                 //FIXME!!!
 //                vicinity.maxHopEntry->setLandmark();
             }
@@ -195,10 +207,30 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
 
         if (!isVicinity && !newRoute->isLandmark())
             return false;
-        irt->addRoute(newRoute);
-        return true;
+
+        newRoute->vicinity = isVicinity;
+        //irt->addRoute(newRoute); // do this here OR in keepBestRoute()
+
+        //TODO: very different in semantics from selectBestRoute
+        // (sBR has triggers in itself AND keeps old entries, just deactivates them)
+        bool importedNewRoute = keepBestRoute(newRoute, oldRoute);
+        // selectLocalAddress()
+        return importedNewRoute;
     }
     //FIXME mem-leaks?
+}
+
+bool UniSphereControlPlane::keepBestRoute(UniSphereRoute* newRoute, UniSphereRoute* oldRoute) {
+    // if there is no oldRoute OR if the newRoute is better, add newRoute
+    if (!oldRoute || newRoute->getMetric() < oldRoute->getMetric()) {
+        newRoute->active = true;
+        irt->addRoute(newRoute);
+        if (oldRoute)
+            irt->deleteRoute(oldRoute);
+        return true; // imported newRoute
+    }
+    else
+        return false; // kept oldRoute
 }
 
 bool UniSphereControlPlane::retract(L3Address dest) {
