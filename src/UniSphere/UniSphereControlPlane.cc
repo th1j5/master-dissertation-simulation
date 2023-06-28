@@ -218,9 +218,10 @@ size_t UniSphereControlPlane::getMaximumVicinitySize() const
 UniSphereControlPlane::CurrentVicinity UniSphereControlPlane::getCurrentVicinity() const {
     // get entries which are: active && inVicinity (&& !extendedVicinity ?)
     // ASSUMPTION: all entries in RT are active. isVicinity is checked (and no extendedVicinity is used) TODO
-    CurrentVicinity vicinity;
+    CurrentVicinity vicinity {};
 
-    vicinity.size = 0;
+    ASSERT(vicinity.size == 0);
+    ASSERT(vicinity.maxHopEntry == nullptr);
     for (int i = 0; i < irt->getNumRoutes(); ++i) {
         UniSphereRoute *e = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
         if (e->vicinity) {

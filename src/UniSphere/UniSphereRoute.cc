@@ -35,7 +35,7 @@ UniSphereRoute::UniSphereRoute(L3Address neighbour) {
     setDestination(neighbour);
     setNextHop(neighbour);
     setMetric(0);
-    // By default, active = false
+    ASSERT(!active);
 }
 
 /**
