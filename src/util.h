@@ -33,6 +33,17 @@ static bool isNeighbourRoute(const inet::IRoute *entry) {
     else
         return false;
 }
+static bool isUnitializedNeighbour(const UniSphereRoute *entry) {
+    // Is this an entry inserted by the adjManager or not?
+    EV_WARN << entry->getFullPath() << endl;
+    EV_WARN << entry->getMetric() << endl;
+    return isNeighbourRoute(entry)
+            && !entry->active
+            && !entry->vicinity
+            && entry->seqno == 0
+            && entry->forwardPath.size() == 0
+            && entry->reversePath.size() == 0;
+}
 }
 
 static std::vector<cModule*> getConnectedNodes(inet::ModuleRefByPar<inet::IRoutingTable> irt) {

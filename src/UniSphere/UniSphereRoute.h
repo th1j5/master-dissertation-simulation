@@ -28,6 +28,11 @@ class UniSphereRoute: public inet::NextHopRoute {
   private:
     bool landmark = false;
   public:
+    /**
+     * Unclear if this is useful
+     * Can be used for differentiating between routes only used as placeholders for neighbours and ...
+     * The only reason to keep non-active routes around is when a retraction happens
+     */
     bool active = false;
     bool vicinity = false;
     uint32_t seqno = 0;
