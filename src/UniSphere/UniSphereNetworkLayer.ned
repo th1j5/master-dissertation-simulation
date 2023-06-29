@@ -16,6 +16,10 @@
 package prototype.UniSphere;
 
 import inet.networklayer.nexthop.*;
+import inet.common.MessageDispatcher;
+import inet.networklayer.arp.ipv4.GlobalArp;
+import inet.networklayer.common.EchoProtocol;
+import inet.networklayer.contract.INetworkLayer;
 
 module UniSphereControlPlane {
     parameters:
@@ -26,11 +30,56 @@ module UniSphereControlPlane {
         input networkLayerIn;
         output networkLayerOut;
 }
-module UniSphereDataPlane extends NextHopNetworkLayer {
+module UniSphereForwarding extends NextHopForwarding {
+    parameters:
+        @class(UniSphereForwarding);
+}
+// NextHopNetworkLayer was not extendable
+module UniSphereDataPlane like INetworkLayer {
     parameters:
 //        @class();
         //string locChangingStrategy;
+
+        bool forwarding = default(false);
+        bool multicastForwarding = default(false);
+        string interfaceTableModule;
+        *.forwarding = this.forwarding;
+        *.multicastForwarding = this.multicastForwarding;
+        *.interfaceTableModule = default(absPath(this.interfaceTableModule));
+        *.routingTableModule = default(absPath(".routingTable"));
+        *.arpModule = default(absPath(".arp"));
+        @display("i=block/fork");
+    gates:
+        input ifIn @labels(INetworkHeader);
+        output ifOut @labels(INetworkHeader);
+        input transportIn @labels(Ipv4ControlInfo/down);
+        output transportOut @labels(Ipv4ControlInfo/up);
+
     submodules:
+        routingTable: NextHopRoutingTable {
+            parameters:
+                @display("p=100,100;is=s");
+        }
+        echo: EchoProtocol {
+            parameters:
+                @display("p=600,100");
+        }
+        up: MessageDispatcher {
+            parameters:
+                @display("p=450,200;b=480,5");
+        }
+        arp: GlobalArp {
+            parameters:
+                @display("p=300,300;q=pendingQueue");
+        }
+        nextHop: UniSphereForwarding {
+            parameters:
+                @display("p=600,300;q=queue");
+        }
+        lp: MessageDispatcher {
+            parameters:
+                @display("p=450,400;b=480,5");
+        }
         //ttrTable: Ttr if locChangingStrategy == "TTR" {
         //    @display("p=100,400;is=s");
         //}
@@ -38,6 +87,25 @@ module UniSphereDataPlane extends NextHopNetworkLayer {
 //            parameters:
 //                @display("p=100,200;is=s");
 //        }
+
+    connections allowunconnected:
+        up.out++ --> { @display("m=n"); } --> transportOut;
+        up.in++ <-- { @display("m=n"); } <-- transportIn;
+
+        nextHop.transportOut --> up.in++;
+        nextHop.transportIn <-- up.out++;
+
+        up.out++ --> echo.ipIn;
+        up.in++ <-- echo.ipOut;
+
+        lp.out++ --> arp.ifIn;
+        lp.in++ <-- arp.ifOut;
+
+        lp.out++ --> nextHop.queueIn;
+        lp.in++ <-- nextHop.queueOut;
+
+        lp.in++ <-- { @display("m=s"); } <-- ifIn;
+        lp.out++ --> { @display("m=s"); } --> ifOut;
 }
 module UniSphereRoutingTable {
     @class(UniSphereRoutingTable);
