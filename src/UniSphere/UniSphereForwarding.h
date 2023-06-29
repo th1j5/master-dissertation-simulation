@@ -26,6 +26,8 @@ using namespace omnetpp;
 class UniSphereForwarding: public inet::NextHopForwarding {
   public:
     virtual void routePacket(inet::Packet *datagram, const inet::NetworkInterface *destIE, const inet::L3Address& nextHop, bool fromHL) override;
+    virtual void encapsulate(inet::Packet *transportPacket, const inet::NetworkInterface *& destIE) override;
+//    virtual void decapsulate(Packet *datagram) override;
 
     UniSphereForwarding();
     virtual ~UniSphereForwarding();
