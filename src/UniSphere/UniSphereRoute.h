@@ -20,7 +20,8 @@
 
 #include "inet/networklayer/nexthop/NextHopRoute.h"
 
-#include "PathAnnounce_m.h" // defines RoutingPath
+#include "RoutingPath_m.h"
+#include "PathAnnounce_m.h"
 
 using namespace omnetpp;
 
