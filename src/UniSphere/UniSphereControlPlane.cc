@@ -101,7 +101,7 @@ void UniSphereControlPlane::announceOurselves() {
     for (auto peer: getConnectedNodes(irt)) {
 //        selfAnnounce->seqno++; //FIXME: seqno not updated in U-Sphere???
         auto payload = selfAnnounce->exportEntry();
-        ASSERT(payload->getOrigin() == payload->getForward_path().back());
+        ASSERT(payload->getOrigin() == payload->getForward_path().top());
         sendToNeighbour(getHostID(peer), payload);
 
         // Send full routing table to neighbor

@@ -22,7 +22,7 @@ UniSphereRoute::UniSphereRoute(Ptr<const PathAnnounce> ctrlMessage) {
     reversePath = ctrlMessage->getReverse_path(); // only landmarks
 
 //    L3Address vport = ctrlMessage->getForward_path(pathSize-1); // neighbour who send it
-    L3Address vport = forwardPath.front(); // neighbour who send it
+    L3Address vport = forwardPath.top(); // neighbour who send it
     setNextHop(vport);
 //    route->setMetric(pathSize-1);
     setMetric(forwardPath.size()-1);
@@ -52,11 +52,12 @@ Ptr<PathAnnounce> UniSphereRoute::exportEntry() {
     //FIXME: check that paths are correctly constructed
     // add ourselves to forward path
     cModule *host = getContainingNode(check_and_cast<cModule*>(getRoutingTableAsGeneric()));
-    RoutingPath prependedForwardPath = RoutingPath(forwardPath);
-    prependedForwardPath.push_front(getHostID(host));
+    RoutingPath appendedForwardPath = RoutingPath(forwardPath);
+    appendedForwardPath.push(getHostID(host));
 
-    payload->setForward_path(prependedForwardPath); //FIXME (check that @byValue made a copy)
-    payload->setReverse_path(reversePath); // same
+    payload->setForward_path(appendedForwardPath); //FIXME (check that @byValue made a copy)
+    // reverse path == inverse(forwardPath) (in our simplified implementation)
+    payload->setReverse_path(reversePath);
     // no vport needed in reverse path, due to our adaptations to use IDs instead
 
     payload->setChunkLength(B(10)); //FIXME
@@ -71,6 +72,8 @@ std::string UniSphereRoute::str() const {
     out << (active   ? "A" : "..");
     out << (vicinity ? "V" : "..") << " ";
     out << "seq:" << seqno << " ";
+    out << "R:" << reversePath << " ";
+    out << "F:" << forwardPath << " ";
 
     out << NextHopRoute::str();
 

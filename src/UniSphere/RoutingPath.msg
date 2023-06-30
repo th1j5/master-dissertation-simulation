@@ -15,7 +15,20 @@
 import inet.networklayer.common.L3Address;
 
 cplusplus {{
-typedef std::list<inet::L3Address> RoutingPath;
+#include <stack>
+typedef std::stack<inet::L3Address, std::vector<inet::L3Address>> RoutingPath;
+
+std::ostream& operator<<(std::ostream& os, RoutingPath e);
+}}
+
+cplusplus(cc) {{
+std::ostream& operator<<(std::ostream& os, RoutingPath e) {
+    while (!e.empty()) {
+        os << e.top();
+        e.pop();
+    }
+    return os;
+}
 }}
 
 class RoutingPath {
