@@ -18,8 +18,10 @@
 
 #include <omnetpp.h>
 #include <inet/applications/udpapp/UdpBasicApp.h>
+
 #include "LocatorUpdatePacket_m.h"
 #include "AdjacencyManager/AdjacencyManager.h"
+#include "Locator_m.h"
 
 using namespace omnetpp;
 
@@ -30,6 +32,7 @@ private:
 protected:
     // parameters
     std::vector<double> corrID_MN;
+    std::vector<Locator> destAddresses;
     const char * const locUpdateName = "LocUpdate";
     //inet::ModuleRefByPar<AdjacencyManagerOld> adjMgmt;
 
@@ -44,8 +47,10 @@ protected:
     virtual void processStop() override;
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, inet::intval_t numLocUpdates, cObject *details) override;
 
+    Locator chooseDestLoc();
     virtual void sendPacket() override; // only add tag
-    void sendLocUpdate(inet::L3Address newLoc, int numLocUpdates);
+    virtual void sendLocUpdate(inet::L3Address newLoc, int numLocUpdates);
+    virtual bool sendPayload(const inet::Ptr<MultiplexerPacket>& payload, std::ostringstream& str, simsignal_t signal);
     virtual void processPacket(inet::Packet *pk) override;
 
 public:

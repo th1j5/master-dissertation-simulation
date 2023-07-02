@@ -18,9 +18,11 @@
 #include "inet/common/packet/Packet.h"
 #include "inet/networklayer/common/FragmentationTag_m.h"
 #include "inet/common/TimeTag_m.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/networklayer//ipv4/Ipv4InterfaceData.h"
 #include "inet/queueing/common/LabelsTag_m.h" // Alternative: inet/common/FlowTag.msg
+
+#include "NodeIDToLocatorResolver.h"
+#include "UniSphere/LocatorTag_m.h"
 // #include "inet/InterfaceTableAccess.h"
 //#include "AdjacencyManager/AdjacencyManagerClient.h"
 
@@ -41,7 +43,42 @@ void UdpBasicConnectionApp::initialize(int stage)
 }
 void UdpBasicConnectionApp::processStart() {
     corrID_MN = std::vector<double>(1, -1.0); // processStart already sends a packet... FIXME
-    UdpBasicApp::processStart();
+
+    /* start UdpBasicApp::processStart */
+    socket.setOutputGate(gate("socketOut"));
+    const char *localAddress = par("localAddress");
+    socket.bind(*localAddress ? L3AddressResolver().resolve(localAddress) : L3Address(), localPort);
+    setSocketOptions();
+
+    const char *destAddrs = par("destAddresses");
+    cStringTokenizer tokenizer(destAddrs);
+    const char *token;
+    {
+        UniSphereLocator b = UniSphereLocator();
+        EV_WARN << b.ID << endl;
+    }
+
+    while ((token = tokenizer.nextToken()) != nullptr) {
+        destAddressStr.push_back(token);
+        Locator result;
+        NodeIDToLocatorResolver().tryResolve(token, result);
+        if (result.isUnspecified())
+            EV_ERROR << "cannot resolve destination address: " << token << endl;
+        destAddresses.push_back(result);
+    }
+
+    if (!destAddresses.empty()) {
+        selfMsg->setKind(SEND);
+        processSend();
+    }
+    else {
+        if (stopTime >= CLOCKTIME_ZERO) {
+            selfMsg->setKind(STOP);
+            scheduleClockEventAt(stopTime, selfMsg);
+        }
+    }
+    /* end UdpBasicApp::processStart */
+
     if (destAddresses.size() > 1)
         throw cRuntimeError("We cannot handle more than 1 communicating entity per app instantiation");
     if (!destAddresses.empty()) {
@@ -90,46 +127,55 @@ void UdpBasicConnectionApp::sendPacket()
 {
     std::ostringstream str;
     str << packetName << "-" << numSent;
-    Packet *packet = new Packet(str.str().c_str());
-    if (dontFragment)
-        packet->addTag<FragmentationReq>()->setDontFragment(true);
     const auto& payload = makeShared<MultiplexerPacket>();
     payload->setChunkLength(B(par("messageLength")));
-    payload->setSequenceNumber(numSent);
-    payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
     payload->setMultiplexerDestination("app");
-    L3Address destAddr = chooseDestAddr();
     double corrID = corrID_MN[0];
     payload->setLocUpdateCorrelationID(corrID);
-    packet->insertAtBack(payload);
-    emit(packetSentSignal, packet);
-    socket.sendTo(packet, destAddr, destPort);
-    numSent++;
+
+    if (sendPayload(payload, str, packetSentSignal))
+        numSent++;
 }
 
 void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc, int numLocUpdates)
 {
     //double corrID = dynamic_cast<AdjacencyManagerClient *>(adjMgmt.get())->getCorrID(numLocUpdates);
     double corrID = 123.0;
+
     std::ostringstream str;
     str << locUpdateName << "-" << numLocUpdates;
-    Packet *packet = new Packet(str.str().c_str());
-    if (dontFragment)
-        packet->addTag<FragmentationReq>()->setDontFragment(true);
     const auto& payload = makeShared<LocatorUpdatePacket>();
     payload->setChunkLength(B(10)); // FIXME: hardcoded
-    payload->setSequenceNumber(numSent);
     payload->setSequenceNumLocUpdate(numLocUpdates);
     payload->setLocUpdateCorrelationID(corrID);
     payload->setOldAddress(L3Address()); // TODO: update
     payload->setNewAddress(newLoc);
+
+    if (sendPayload(payload, str, locUpdateSentSignal))
+        numLocUpdateSend++;
+}
+bool UdpBasicConnectionApp::sendPayload(const Ptr<MultiplexerPacket>& payload, std::ostringstream& str, simsignal_t signal) {
+    if (destAddresses.empty())
+        throw cRuntimeError("No peer to send the update to...");
+    // don't send packets if addr is still isUnspecified()
+    Locator destAddr = chooseDestLoc();
+    if (destAddr.isUnspecified())
+        return false;
+
+    payload->setSequenceNumber(numSent);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
-    packet->insertAtBack(payload);
-    if (destAddresses.empty()) throw cRuntimeError("No peer to send the update to...");
-    L3Address destAddr = chooseDestAddr();
-    emit(locUpdateSentSignal, packet);
-    socket.sendTo(packet, destAddr, destPort);
-    numLocUpdateSend++;
+
+    Packet *packet = new Packet(str.str().c_str(), payload);
+//    packet->insertAtBack(payload);
+    if (dontFragment)
+        packet->addTag<FragmentationReq>()->setDontFragment(true);
+
+    auto& locReq = packet->addTagIfAbsent<LocatorReq>();
+    locReq->setDestLoc(destAddr);
+
+    emit(signal, packet);
+    socket.sendTo(packet, destAddr.getFinalDestination(), destPort); // Uni-Sphere also uses destAddr
+    return true;
 }
 
 void UdpBasicConnectionApp::processPacket(Packet *pk)
@@ -146,7 +192,7 @@ void UdpBasicConnectionApp::processPacket(Packet *pk)
         numLocUpdateReceived++;
         // FIXME: update destination location (brittle)
         auto locUpdateData = pk->peekData<LocatorUpdatePacket>();
-        destAddresses[0] = locUpdateData->getNewAddress();
+        destAddresses[0] = locUpdateData->getNewAddress(); //FIXME!
         corrID_MN[0] = locUpdateData->getLocUpdateCorrelationID();
     }
     else {
@@ -154,3 +200,13 @@ void UdpBasicConnectionApp::processPacket(Packet *pk)
     }
     delete pk;
 }
+
+Locator UdpBasicConnectionApp::chooseDestLoc()
+{
+    int k = intrand(destAddresses.size());
+    if (destAddresses[k].isUnspecified() || (!isUniSphere() && destAddresses[k].getFinalDestination().isLinkLocal())) {
+        NodeIDToLocatorResolver().tryResolve(destAddressStr[k].c_str(), destAddresses[k]);
+    }
+    return destAddresses[k];
+}
+

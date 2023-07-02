@@ -14,13 +14,12 @@
 // 
 
 import inet.common.INETDefs;
-import inet.applications.base.ApplicationPacket;
-import inet.networklayer.common.L3Address;
 import MultiplexerPacket;
+import Locator;
 
 class LocatorUpdatePacket extends MultiplexerPacket {
     multiplexerDestination = "flow_allocator";
     int sequenceNumLocUpdate;
-    inet::L3Address oldAddress;
-    inet::L3Address newAddress;
+    Locator oldAddress;
+    Locator newAddress;
 }
