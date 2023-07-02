@@ -85,7 +85,7 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
             && e->getMetric() == 0)
         routeAlreadyPresent = true;
 
-    if (!routeAlreadyPresent) {
+    if (isUniSphere() && !routeAlreadyPresent) {
         UniSphereRoute* route = new UniSphereRoute(peerID);
         route->setInterface(iface);
 //        route->setLandmark()
@@ -94,6 +94,10 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
 //                    route->setAdminDist(inet::IRoute::RouteAdminDist::dDirectlyConnected); // only IPv4
 //        route->setPrefixLength(longestPrefix);
         irt->addRoute(route);
+    }
+    else if (!isUniSphere() && !routeAlreadyPresent) {
+        // IPv4 case
+        ASSERT(false);
     }
 }
 void AdjacencyManager::disconnectNode(cModule* neighbour) {
