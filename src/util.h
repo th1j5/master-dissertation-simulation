@@ -12,6 +12,8 @@
 #include "inet/networklayer/common/L3Address.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 
+#include "UniSphere/UniSphereRoute.h"
+
 static inet::L3Address getHostID(cModule* host) {
     // FIXME problematic code
     auto* peerRt = dynamic_cast<inet::IRoutingTable*>(host->findModuleByPath(".generic.routingTable"));
@@ -94,6 +96,34 @@ static int getNetworkSize() {
     }
     EV_DEBUG << "Network estimate: " << networkSize << endl;
     return networkSize;
+}
+
+static bool isUniSphere() {
+    static enum {
+        UNKNOWN,
+        IPV4,
+        UNISPHERE
+    } simulationType = { UNKNOWN };
+
+    // enable/disable check for each run or not...
+    if (true || simulationType == UNKNOWN) {
+        cObject *mod = cSimulation::getActiveSimulation()->findObject("unisphere");
+        if (mod)
+            simulationType = UNISPHERE;
+        else
+            simulationType = IPV4;
+    }
+    switch (simulationType) {
+        case IPV4:
+            return false;
+            break;
+        case UNISPHERE:
+            return true;
+            break;
+        default:
+            throw cRuntimeError("SimulationType unknown or unsupported");
+            break;
+    }
 }
 
 #endif /* UTIL_H_ */
