@@ -44,6 +44,7 @@ void UniSphereControlPlane::initialize(int stage) {
     RoutingProtocolBase::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
         selfMsg = new cMessage("announceTimer");
+        locator = UniSphereLocator(); // empty Locator
 
         // get the routing table to update and subscribe it to the blackboard
         irt.reference(this, "routingTableModule", true);
@@ -69,6 +70,7 @@ void UniSphereControlPlane::initialize(int stage) {
         selfAnnounce->setRoutingTable(check_and_cast<NextHopRoutingTable *>(irt.get())); // grant access to this host
         WATCH(selfAnnounce);
         WATCH_PTR(selfAnnounce);
+        WATCH(locator);
 
         // Compute whether we should become a landmark or not
         networkSizeEstimateChanged(getNetworkSize());
@@ -335,6 +337,47 @@ void UniSphereControlPlane::networkSizeEstimateChanged(int size) {
     if (x < std::sqrt(std::log(n) / n)) {
       EV_WARN << "Becoming a LANDMARK." << endl;
       selfAnnounce->setLandmark(true);
+    }
+}
+
+bool UniSphereControlPlane::selectLocalAddress() {
+    auto selfID = getHostID(host);
+    if (selfAnnounce->isLandmark()) {
+        if (locator.ID != selfID ||
+                locator.path.size() > 0) {
+            locator.ID = selfID;
+            locator.path = RoutingPath();
+        // TODO signal Loc change?
+//            emit(newLocAssignedSignal, numLocUpdates, ie);
+        return true;
+      }
+      return false;
+    }
+    // If not self landmark
+    UniSphereRoute* bestLandmark = nullptr;
+    for (int i = 0; i < irt->getNumRoutes(); ++i) {
+        UniSphereRoute* re = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
+        if (re->isLandmark()
+                && (bestLandmark == nullptr || re->getMetric() < bestLandmark->getMetric())) {
+            bestLandmark = re;
+        }
+    }
+    ASSERT(bestLandmark); // there is no known landmark??
+    if (locator.ID == selfID
+            && locator.path.size() > 0
+            && locator.path.top() == bestLandmark->getDestinationAsGeneric()) // FIXME: correct way?
+        return false;
+    else {
+        locator.ID = getHostID(host);
+        locator.path = RoutingPath();
+        // reverse_copy
+        auto temp = bestLandmark->forwardPath;
+        while(!temp.empty()) {
+            locator.path.push(temp.top());
+            temp.pop();
+        }
+        //TODO: emit();
+        return true;
     }
 }
 

@@ -26,6 +26,7 @@
 #include "inet/networklayer/nexthop/NextHopRoute.h"
 
 #include "UniSphereRoute.h"
+#include "Locator_m.h"
 
 using namespace omnetpp;
 
@@ -46,6 +47,8 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
 
 
   public:
+    virtual UniSphereLocator getLocator() { return locator; }
+
     UniSphereControlPlane();
     virtual ~UniSphereControlPlane();
 
@@ -57,6 +60,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     // state
     cMessage *selfMsg = nullptr;
     UniSphereRoute *selfAnnounce = nullptr;
+    UniSphereLocator locator; // we only need to keep the last, because all packets are accepted regardless of Loc
 
     // parameters
     cModule *host = nullptr;
@@ -82,7 +86,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void sendToNeighbour(inet::L3Address neigbour, inet::Ptr<PathAnnounce> payload); // == ribExportQueueAnnounce in U-Sphere
     void fullUpdate(inet::L3Address neighbour);
 
-    virtual bool selectLocalAddress() { return false; }
+    virtual bool selectLocalAddress();
 
     virtual void networkSizeEstimateChanged(int size);
     inet::NetworkInterface *getSourceInterfaceFrom(inet::Packet *packet) {
