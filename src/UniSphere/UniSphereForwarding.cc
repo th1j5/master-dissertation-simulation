@@ -15,6 +15,7 @@
 
 #include "UniSphereForwarding.h"
 #include "UniSphereForwardingHeader_m.h"
+#include "LocatorTag_m.h"
 
 #include "inet/common/ModuleAccess.h"
 #include "inet/common/ProtocolTag_m.h"
@@ -90,8 +91,20 @@ void UniSphereForwarding::routePacket(Packet *datagram, const NetworkInterface *
         /* U-Sphere */
         // error handling: destination address does not exist in routing table:
         // look at Locator
+        if (re == nullptr && header->getPath().size() > 0) {
+            // try to find landmark/next hop
+            RoutingPath path = header->getPath();
+            re = routingTable->findBestMatchingRoute(path.top()); //FIXME: check correctness
+            // if it is the nexthop, pop it from the path
+            if (re != nullptr && re->getNextHopAsGeneric() == path.top()) {
+                const auto& newHeader = removeNetworkProtocolHeader<UniSphereForwardingHeader>(datagram);
+                path.pop();
+                newHeader->setPath(path);
+                insertNetworkProtocolHeader(datagram, Protocol::nextHopForwarding, newHeader);
+                header = newHeader;
+            }
+        }
         if (re == nullptr) {
-            // find landmark & forward path
             // last
             EV_INFO << "unroutable, discarding packet\n";
             numUnroutable++;
@@ -138,6 +151,7 @@ void UniSphereForwarding::encapsulate(Packet *transportPacket, const NetworkInte
     auto& l3AddressReq = transportPacket->removeTag<L3AddressReq>();
     L3Address src = l3AddressReq->getSrcAddress();
     L3Address dest = l3AddressReq->getDestAddress();
+    auto& locReq = transportPacket->removeTagIfPresent<LocatorReq>();
 
     header->setProtocol(transportPacket->getTag<PacketProtocolTag>()->getProtocol());
 
@@ -146,6 +160,11 @@ void UniSphereForwarding::encapsulate(Packet *transportPacket, const NetworkInte
 
     // set source and destination address
     header->setDestinationAddress(dest);
+    if (locReq) {
+        Locator destLoc = locReq->getDestLoc();
+        ASSERT(dest == destLoc.getFinalDestination());
+        header->setPath(destLoc.getPath());
+    }
 
     // multicast interface option, but allow interface selection for unicast packets as well
     const auto& ifTag = transportPacket->findTag<InterfaceReq>();
