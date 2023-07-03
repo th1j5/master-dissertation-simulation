@@ -22,15 +22,18 @@
 
 using namespace omnetpp;
 
- #define DEFAULT_ADDR_TYPE    (NodeIDToLocatorResolver::ADDR_IPv4 | NodeIDToLocatorResolver::ADDR_IPv6 | NodeIDToLocatorResolver::ADDR_MODULEPATH | NodeIDToLocatorResolver::ADDR_MODULEID)
+ #define DEFAULT_ADDR_TYPE_1    (NodeIDToLocatorResolver::ADDR_IPv4 | NodeIDToLocatorResolver::ADDR_IPv6 | NodeIDToLocatorResolver::ADDR_MODULEPATH | NodeIDToLocatorResolver::ADDR_MODULEID)
 
 class NodeIDToLocatorResolver: public inet::L3AddressResolver {
   public:
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
     virtual void routerIdOf(cModule *host, Locator& result);
-    virtual void addressOf(cModule *host, Locator& result, int addrType = DEFAULT_ADDR_TYPE);
-    virtual void addressOf(cModule *host, const char *ifname, Locator& result, int addrType = DEFAULT_ADDR_TYPE);
-    virtual bool tryResolve(const char *str, Locator& result, int addrType = DEFAULT_ADDR_TYPE);
-    virtual bool tryResolve(const char *str, inet::L3Address& result, int addrType = DEFAULT_ADDR_TYPE) override { throw cRuntimeError("Unjust usage..."); }
+    virtual void addressOf(cModule *host, Locator& result, int addrType = DEFAULT_ADDR_TYPE_1);
+    virtual void addressOf(cModule *host, const char *ifname, Locator& result, int addrType = DEFAULT_ADDR_TYPE_1);
+#pragma clang diagnostic pop
+    virtual bool tryResolve(const char *str, Locator& result, int addrType = DEFAULT_ADDR_TYPE_1);
+    virtual bool tryResolve(const char *str, inet::L3Address& result, int addrType = DEFAULT_ADDR_TYPE_1) override { throw cRuntimeError("Unjust usage..."); }
 
     NodeIDToLocatorResolver();
     virtual ~NodeIDToLocatorResolver();
