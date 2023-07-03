@@ -29,6 +29,7 @@ using namespace inet; // more OK to use in .cc
 Define_Module(UniSphereControlPlane);
 
 const inet::Protocol *UniSphereControlPlane::unisphere = new Protocol("unisphere", "U-Sphere");
+const simsignal_t UniSphereControlPlane::newNeighbourConnectedSignal = cComponent::registerSignal("newNeighConnected");
 
 UniSphereControlPlane::UniSphereControlPlane() {
     // TODO Auto-generated constructor stub
@@ -37,6 +38,8 @@ UniSphereControlPlane::UniSphereControlPlane() {
 UniSphereControlPlane::~UniSphereControlPlane() {
     cancelAndDelete(selfMsg);
     delete selfAnnounce;
+    if (host != nullptr && host->isSubscribed(newNeighbourConnectedSignal, this))
+        host->unsubscribe(newNeighbourConnectedSignal, this);
 //    if (irtOld) {
 //        auto *mod = check_and_cast<cModule*>(irtOld.get());
 //        mod->deleteModule();
@@ -70,6 +73,9 @@ void UniSphereControlPlane::initialize(int stage) {
 //        cModuleType *moduleType = cModuleType::get("inet.networklayer.nexthop.NextHopRoutingTable");
 //        cModule *mod = moduleType->createScheduleInit("irtOld", host);
 //        irtOld = opp_component_ptr<IRoutingTable>(check_and_cast<IRoutingTable*>(mod));
+
+        // subscribe
+        host->subscribe(newNeighbourConnectedSignal, this);
 
         // init ourselves
         selfAnnounce->setDestination(getHostID(host));
@@ -282,6 +288,17 @@ void UniSphereControlPlane::fullUpdate(L3Address neighbour) {
             sendToNeighbourProtected(neighbour, e);
         }
     }
+}
+
+void UniSphereControlPlane::receiveSignal(cComponent *source, simsignal_t signalID, cObject *neigh, cObject *details) {
+    Enter_Method("%s", cComponent::getSignalName(signalID));
+    if (signalID == newNeighbourConnectedSignal) {
+        announceOurselves(check_and_cast<cModule*>(neigh));
+    }
+    //case /*TODO: peerRemoved*/:
+    /*case routingEntryExpired?*/
+    else
+        throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
 }
 
 size_t UniSphereControlPlane::getMaximumVicinitySize() const

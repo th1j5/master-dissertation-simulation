@@ -22,6 +22,7 @@ simple AdjacencyManager
 {
     parameters:
         @class(AdjacencyManager);
+        @signal[newNeighConnected](type=cModule);
         string interfaceTableModule; // path to the InterfaceTable module
         string routingTableModule; // path to the Ipv4RoutingTable module
 //        @display("i=block/app2");

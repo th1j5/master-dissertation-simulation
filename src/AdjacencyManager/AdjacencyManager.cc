@@ -14,8 +14,10 @@
 // 
 
 #include "AdjacencyManager.h"
-#include "../UniSphere/UniSphereRoute.h"
-#include "../util.h"
+#include "UniSphere/UniSphereRoute.h"
+#include "util.h"
+#include "UniSphere/UniSphereControlPlane.h"
+
 #include "inet/networklayer/nexthop/NextHopRoute.h"
 #include "inet/networklayer/nexthop/NextHopRoutingTable.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
@@ -94,6 +96,7 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
 //                    route->setAdminDist(inet::IRoute::RouteAdminDist::dDirectlyConnected); // only IPv4
 //        route->setPrefixLength(longestPrefix);
         irt->addRoute(route);
+        emit(UniSphereControlPlane::newNeighbourConnectedSignal, neighbour);
     }
     else if (!isUniSphere() && !routeAlreadyPresent) {
         // IPv4 case

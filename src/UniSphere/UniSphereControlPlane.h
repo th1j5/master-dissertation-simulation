@@ -47,6 +47,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
 
 
   public:
+    static const simsignal_t newNeighbourConnectedSignal;
     virtual UniSphereLocator getLocator() { return locator; }
 
     UniSphereControlPlane();
@@ -78,7 +79,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
     virtual void initialize(int stage) override;
     virtual void handleMessageWhenUp(cMessage *msg) override;
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override {}
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override;
     virtual void announceOurselves();
     virtual void announceOurselves(cModule* peer);
     virtual void processPacket(inet::Packet *pkt);
