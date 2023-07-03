@@ -202,8 +202,7 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
             newRoute->active = true;
             newRoute->vicinity = true;
         }
-        irt->deleteRoute(oldRoute);
-        oldRoute = nullptr; // importNewRoute WILL succeed
+        irt->deleteRoute(oldRoute); // oldRoute no longer valid
         //TODO Might change bestRoute & returns true in U-Sphere
     }
     else {
@@ -227,6 +226,7 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
                     vicinity.maxHopEntry->vicinity = false;
                 } else {
                     retract(vicinity.maxHopEntry->getDestinationAsGeneric());
+                    // oldRoute no longer valid
                 }
                 //FIXME!!!
 //                vicinity.maxHopEntry->setLandmark();
@@ -246,7 +246,7 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
     }
     // TODO: very different in semantics from selectBestRoute
     // (sBR has triggers in itself AND keeps old entries, just deactivates them)
-    bool importedNewRoute = keepBestRoute(newRoute, oldRoute);
+    bool importedNewRoute = keepBestRoute(newRoute);
     if (true && landmarkChangedType)
         // Landmark type of the currently active route has changed
         /*TODO?*/;
@@ -258,13 +258,18 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
     return importedNewRoute;
 }
 
-bool UniSphereControlPlane::keepBestRoute(UniSphereRoute* newRoute, UniSphereRoute* oldRoute) {
+bool UniSphereControlPlane::keepBestRoute(UniSphereRoute* newRoute) {
     // if there is no oldRoute OR if the newRoute is better, add newRoute
-    if (!oldRoute || newRoute->getMetric() < oldRoute->getMetric()) {
+    L3Address origin = newRoute->getDestinationAsGeneric();
+    auto *oldRoute = check_and_cast_nullable<UniSphereRoute*>(irt->findBestMatchingRoute(origin));
+    if (oldRoute == nullptr || newRoute->getMetric() < oldRoute->getMetric()) {
+        if (oldRoute) {
+            irt->deleteRoute(oldRoute);
+            // only ever keep 1 route to a destination... (!= U-Sphere)
+            ASSERT(nullptr == irt->findBestMatchingRoute(origin));
+        }
         newRoute->active = true;
         irt->addRoute(newRoute);
-        if (oldRoute)
-            irt->deleteRoute(oldRoute);
         return true; // imported newRoute
     }
     else

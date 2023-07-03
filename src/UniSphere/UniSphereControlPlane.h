@@ -84,7 +84,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void announceOurselves(cModule* peer);
     virtual void processPacket(inet::Packet *pkt);
     virtual bool importRoute(UniSphereRoute *route);
-    virtual bool keepBestRoute(UniSphereRoute* newRoute, UniSphereRoute* oldRoute);
+    virtual bool keepBestRoute(UniSphereRoute* newRoute);
     virtual bool retract(inet::L3Address dest);
     size_t getMaximumVicinitySize() const;
     CurrentVicinity getCurrentVicinity() const;
