@@ -82,28 +82,31 @@ void UdpBasicConnectionApp::processStart() {
     if (destAddresses.size() > 1)
         throw cRuntimeError("We cannot handle more than 1 communicating entity per app instantiation");
     if (!destAddresses.empty()) {
-//        host->subscribe(AdjacencyManagerClient::newLocAssignedSignal, this);
+        host->subscribe(LocUpdatable::newLocAssignedSignal, this);
     } // only subscribe (=sending LocUpdates) if it has corresponding node
 };
 void UdpBasicConnectionApp::processStop() {
     UdpBasicApp::processStop();
     // assume unsubscribing doesn't error if not really subscribed...
-//    host->unsubscribe(AdjacencyManagerClient::newLocAssignedSignal, this);
+    if (host->isSubscribed(LocUpdatable::newLocAssignedSignal, this))
+        host->unsubscribe(LocUpdatable::newLocAssignedSignal, this);
 };
 void UdpBasicConnectionApp::receiveSignal(cComponent *source, simsignal_t signalID, intval_t numLocUpdates, cObject *details) {
     Enter_Method("%s", cComponent::getSignalName(signalID));
-    const NetworkInterface *ie;
+//    const NetworkInterface *ie;
+    const Locator *newLocator;
 
-    if (true) {}
-//    if (signalID == AdjacencyManagerClient::newLocAssignedSignal) {
+    if (signalID == LocUpdatable::newLocAssignedSignal) {
+        newLocator = check_and_cast<const Locator*>(details);
 //        ie = check_and_cast<const NetworkInterface *>(details);
 //        if (strcmp(ie->getInterfaceName(), par("newLocInterface")) != 0)
 //            throw cRuntimeError("new Loc Assigned signal is assigned to other interface than newLocInterface");
 //        L3Address newLocator = ie->getNetworkAddress();
-//        if (newLocator.isUnspecified())
-//            throw cRuntimeError("new Loc is unspecified");
-//        sendLocUpdate(newLocator, numLocUpdates);
-//    }
+        if (newLocator->isUnspecified())
+            throw cRuntimeError("new Loc is unspecified");
+        sendLocUpdate(*newLocator, numLocUpdates);
+        delete newLocator;
+    }
     else
         throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
 };
@@ -137,7 +140,7 @@ void UdpBasicConnectionApp::sendPacket()
         numSent++;
 }
 
-void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc, int numLocUpdates)
+void UdpBasicConnectionApp::sendLocUpdate(Locator newLoc, int numLocUpdates)
 {
     //double corrID = dynamic_cast<AdjacencyManagerClient *>(adjMgmt.get())->getCorrID(numLocUpdates);
     double corrID = 123.0;
@@ -148,7 +151,7 @@ void UdpBasicConnectionApp::sendLocUpdate(L3Address newLoc, int numLocUpdates)
     payload->setChunkLength(B(10)); // FIXME: hardcoded
     payload->setSequenceNumLocUpdate(numLocUpdates);
     payload->setLocUpdateCorrelationID(corrID);
-    payload->setOldAddress(L3Address()); // TODO: update
+//    payload->setOldAddress(); // TODO: update
     payload->setNewAddress(newLoc);
 
     if (sendPayload(payload, str, locUpdateSentSignal))

@@ -379,31 +379,26 @@ void UniSphereControlPlane::networkSizeEstimateChanged(int size) {
 bool UniSphereControlPlane::selectLocalAddress() {
     auto selfID = getHostID(host);
     if (selfAnnounce->isLandmark()) {
-        if (locator.ID != selfID ||
-                locator.path.size() > 0) {
-            locator.ID = selfID;
-            locator.path = RoutingPath();
-        // TODO signal Loc change?
-//            emit(newLocAssignedSignal, numLocUpdates, ie);
-        return true;
-      }
-      return false;
+        if (locator.ID == selfID && locator.path.size() == 0)
+            return false;
+        locator.ID = selfID;
+        locator.path = RoutingPath();
     }
-    // If not self landmark
-    UniSphereRoute* bestLandmark = nullptr;
-    for (int i = 0; i < irt->getNumRoutes(); ++i) {
-        UniSphereRoute* re = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
-        if (re->isLandmark()
-                && (bestLandmark == nullptr || re->getMetric() < bestLandmark->getMetric())) {
-            bestLandmark = re;
-        }
-    }
-    ASSERT(bestLandmark); // there is no known landmark??
-    if (locator.ID == selfID
-            && locator.path.size() > 0
-            && locator.path.top() == bestLandmark->getDestinationAsGeneric()) // FIXME: correct way?
-        return false;
     else {
+        // If not self landmark
+        UniSphereRoute* bestLandmark = nullptr;
+        for (int i = 0; i < irt->getNumRoutes(); ++i) {
+            UniSphereRoute* re = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
+            if (re->isLandmark()
+                    && (bestLandmark == nullptr || re->getMetric() < bestLandmark->getMetric())) {
+                bestLandmark = re;
+            }
+        }
+        ASSERT(bestLandmark); // there is no known landmark??
+        if (locator.ID == selfID
+                && locator.path.size() > 0
+                && locator.path.top() == bestLandmark->getDestinationAsGeneric()) // FIXME: correct way?
+            return false;
         locator.ID = getHostID(host);
         locator.path = RoutingPath();
         // reverse_copy
@@ -412,9 +407,12 @@ bool UniSphereControlPlane::selectLocalAddress() {
             locator.path.push(temp.top());
             temp.pop();
         }
-        //TODO: emit();
-        return true;
     }
+    // TODO signal Loc change?
+    // TODO!! removeOldLoc
+    numLocUpdates++;
+    emit(newLocAssignedSignal, numLocUpdates, new Locator(locator));
+    return true;
 }
 
 void UniSphereControlPlane::handleStartOperation(LifecycleOperation *operation) {

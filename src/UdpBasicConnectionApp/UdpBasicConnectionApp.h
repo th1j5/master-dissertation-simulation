@@ -49,7 +49,7 @@ protected:
 
     Locator chooseDestLoc();
     virtual void sendPacket() override; // only add tag
-    virtual void sendLocUpdate(inet::L3Address newLoc, int numLocUpdates);
+    virtual void sendLocUpdate(Locator newLoc, int numLocUpdates);
     virtual bool sendPayload(const inet::Ptr<MultiplexerPacket>& payload, std::ostringstream& str, simsignal_t signal);
     virtual void processPacket(inet::Packet *pk) override;
 

@@ -23,7 +23,7 @@ struct UniSphereLocator {
 //        std::swap(path, other.path);
 //        return *this;
 //    }
-    bool isUnspecified() {
+    bool isUnspecified() const {
         return ID.isUnspecified();
     }
 //    UniSphereLocator() {
@@ -41,8 +41,7 @@ struct UniSphereLocator {
     }
 };
 
-
-class Locator {
+class Locator: public cObject {
   private:
     enum class Tag { UNISPHERE, IPV4 } locatorType;
     union {
@@ -104,7 +103,7 @@ class Locator {
         }
         return *this;
     }
-    bool isUnspecified() {
+    bool isUnspecified() const {
         switch (locatorType) {
             case Tag::UNISPHERE:
                 return uniSphereLocator.isUnspecified();
@@ -135,7 +134,7 @@ class Locator {
         }
     }
 };
-
+Register_Class(Locator);
 
 /*
 union Locator {

@@ -82,6 +82,10 @@ void AdjacencyManager::initialize(int stage) {
  *      Otherwise it will be rejected & policy A will be tried.
  *  - static IP routes: we try to stay away from this if possible, due to being it a mess.
  *    We fix them at the start of the simulation (with Configurator) and then we only care about the MNs, policy A.
+ *
+ *
+ *  The DTPM address is decided/assigned/received in the Control Plane.
+ *  Here, it is implemented in the AdjMgmt for IPv4, as a stop-gap measure.
  */
 void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface) {
     //FIXME (will probably result in mayhem - or not, apparently, MODULEID doesn't even uses this, but IPvX & MODULEPATH does)
@@ -96,9 +100,11 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
     if (e != nullptr
             && e->getDestinationAsGeneric() == peerID
             && e->getNextHopAsGeneric() == peerID
-            && e->getInterface() == iface
+//            && e->getInterface() == iface //FIXME!
             && e->getMetric() == 0)
+    {
         routeAlreadyPresent = true;
+    }
 
     if (isUniSphere() && !routeAlreadyPresent) {
         UniSphereRoute* route = new UniSphereRoute(peerID);
@@ -113,6 +119,7 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
     }
     else if (!isUniSphere() && !routeAlreadyPresent) {
         // IPv4 case
+        // Implement
         ASSERT(false);
     }
 }

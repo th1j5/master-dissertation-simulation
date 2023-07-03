@@ -24,6 +24,7 @@ import inet.networklayer.contract.INetworkLayer;
 module UniSphereControlPlane {
     parameters:
         @class(UniSphereControlPlane);
+        @signal[newLocatorAssigned](type=int); // int numLocUpdates
         string routingTableModule;
         string interfaceTableModule;
         bool forwarding = default(true);
