@@ -43,7 +43,9 @@ module ScalableRouter extends Router {
 module MobileScalableRouter extends ManetRouter {
     parameters:
         *.routingTableModule = default("^.generic.routingTable");
-        **.forwarding = false;
+        forwarding = false;
+        // *.forwarding = false; // doesn't work
+        //**.forwarding = false; // FIXME: doesn't work
     submodules:
         adjacencyManager: AdjacencyManager {
             parameters:

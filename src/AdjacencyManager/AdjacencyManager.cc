@@ -74,6 +74,8 @@ void AdjacencyManager::initialize(int stage) {
  *  - policy A: connect a new DTPM (effectively disabling 'forwarding' for this node)
  *    - This might have the same Locator
  *    - This probably will have a different DTPM address.
+ *    - U-Sphere:
+ *      This is taken care of by disabling 'forwarding' in MNs. Nothing else is done.
  *  - policy B: connect with existing DTPM.
  *    - This request might be rejected.
  *    - This request might change the Locator. If this does not change the DTPM (like in U-Sphere), no problem.
@@ -138,6 +140,7 @@ void AdjacencyManager::receiveSignal(cComponent *source, simsignal_t signalID, c
         auto connectedNodes = getConnectedNodes(irt);
         EV_WARN << "Connected to: "; print(connectedNodes); EV_WARN << endl;
         if (!nodesInRangeSorted.empty()) {
+            // TODO: don't connect MNs
             EV_WARN << "Connecting to:" << nodesInRangeSorted.back() << endl;
             // connect BOTH sides
             auto *neigh = nodesInRangeSorted.back();
