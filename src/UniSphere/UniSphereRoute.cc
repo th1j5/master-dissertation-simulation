@@ -12,19 +12,14 @@
 using namespace inet; // more OK to use in .cc
 
 UniSphereRoute::UniSphereRoute(Ptr<const PathAnnounce> ctrlMessage) {
-//    auto pathSize = ctrlMessage->getForward_pathArraySize();
-    auto pathSize = ctrlMessage->getForward_path().size();
-
     setDestination(ctrlMessage->getOrigin());
 
     // FIXME: correct?
     forwardPath = ctrlMessage->getForward_path();
     reversePath = ctrlMessage->getReverse_path(); // only landmarks
 
-//    L3Address vport = ctrlMessage->getForward_path(pathSize-1); // neighbour who send it
     L3Address vport = forwardPath.top(); // neighbour who send it
     setNextHop(vport);
-//    route->setMetric(pathSize-1);
     setMetric(forwardPath.size()-1);
     setLandmark(ctrlMessage->getLandmark());
 }
