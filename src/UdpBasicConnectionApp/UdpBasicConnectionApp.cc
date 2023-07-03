@@ -39,6 +39,11 @@ void UdpBasicConnectionApp::initialize(int stage)
     if (stage == INITSTAGE_LOCAL) {
         host = getContainingNode(this);
         //adjMgmt.reference(this, "adjacencyMgmt", false);
+        if (isUniSphere())
+            controlPlane = check_and_cast<LocUpdatable*>(host->getSubmodule("unisphere"));
+        else;
+//            controlPlane = host->getSubmodule("adjacencyManager"); // TODO: get member which represents the IPv4 control plane
+        ASSERT(controlPlane);
     }
 }
 void UdpBasicConnectionApp::processStart() {
@@ -143,7 +148,8 @@ void UdpBasicConnectionApp::sendPacket()
 void UdpBasicConnectionApp::sendLocUpdate(Locator newLoc, int numLocUpdates)
 {
     //double corrID = dynamic_cast<AdjacencyManagerClient *>(adjMgmt.get())->getCorrID(numLocUpdates);
-    double corrID = 123.0;
+
+    double corrID = controlPlane->getCorrID(numLocUpdates);
 
     std::ostringstream str;
     str << locUpdateName << "-" << numLocUpdates;

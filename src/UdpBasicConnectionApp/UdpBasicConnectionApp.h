@@ -22,6 +22,7 @@
 #include "LocatorUpdatePacket_m.h"
 #include "AdjacencyManager/AdjacencyManager.h"
 #include "Locator_m.h"
+#include "LocUpdatable/LocUpdatable.h"
 
 using namespace omnetpp;
 
@@ -34,6 +35,7 @@ protected:
     std::vector<double> corrID_MN;
     std::vector<Locator> destAddresses;
     const char * const locUpdateName = "LocUpdate";
+    opp_component_ptr<LocUpdatable> controlPlane;
     //inet::ModuleRefByPar<AdjacencyManagerOld> adjMgmt;
 
     // statistics

@@ -27,10 +27,11 @@
 
 #include "UniSphereRoute.h"
 #include "Locator_m.h"
+#include "LocUpdatable/LocUpdatable.h"
 
 using namespace omnetpp;
 
-class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp::cListener {
+class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp::cListener, public LocUpdatable {
   private:
     /**
      * Current vicinity descriptor.
@@ -65,7 +66,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     bool forwarding = false;
 
     // parameters
-    cModule *host = nullptr;
+//    cModule *host = nullptr; // defined in LocUpdatable
     // we seperate the DTPMs by seperating the RTs and always setting an active routing table when working
     //irtActive;
     inet::ModuleRefByPar<inet::IRoutingTable> irt;
