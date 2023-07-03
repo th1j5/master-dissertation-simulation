@@ -26,6 +26,7 @@ module UniSphereControlPlane {
         @class(UniSphereControlPlane);
         string routingTableModule;
         string interfaceTableModule;
+        bool forwarding = default(true);
     gates:
         input networkLayerIn;
         output networkLayerOut;

@@ -32,12 +32,15 @@ const inet::Protocol *UniSphereControlPlane::unisphere = new Protocol("unisphere
 
 UniSphereControlPlane::UniSphereControlPlane() {
     // TODO Auto-generated constructor stub
-
 }
 
 UniSphereControlPlane::~UniSphereControlPlane() {
     cancelAndDelete(selfMsg);
     delete selfAnnounce;
+//    if (irtOld) {
+//        auto *mod = check_and_cast<cModule*>(irtOld.get());
+//        mod->deleteModule();
+//    }
 }
 
 void UniSphereControlPlane::initialize(int stage) {
@@ -51,6 +54,7 @@ void UniSphereControlPlane::initialize(int stage) {
         ift.reference(this, "interfaceTableModule", true);
         peerIn = gate("networkLayerIn");
         peerOut = gate("networkLayerOut");
+        forwarding = par("forwarding");
 
         if (!ProtocolGroup::getIpProtocolGroup()->findProtocol(protocolId)) { // one-shot execution
             ProtocolGroup::getIpProtocolGroup()->addProtocol(protocolId, unisphere);
@@ -63,11 +67,15 @@ void UniSphereControlPlane::initialize(int stage) {
         // get the hostname
         host = getContainingNode(this);
         selfAnnounce = new UniSphereRoute();
+//        cModuleType *moduleType = cModuleType::get("inet.networklayer.nexthop.NextHopRoutingTable");
+//        cModule *mod = moduleType->createScheduleInit("irtOld", host);
+//        irtOld = opp_component_ptr<IRoutingTable>(check_and_cast<IRoutingTable*>(mod));
 
         // init ourselves
         selfAnnounce->setDestination(getHostID(host));
         selfAnnounce->setLandmark(false); // see networkSizeEstimateChanged
-        selfAnnounce->setRoutingTable(check_and_cast<NextHopRoutingTable *>(irt.get())); // grant access to this host
+        // grant access to this host. Only 1 selfAnnounce is used for consistency, even if the RT could be logically split (!= DTPMs)
+        selfAnnounce->setRoutingTable(check_and_cast<NextHopRoutingTable *>(irt.get()));
         WATCH(selfAnnounce);
         WATCH_PTR(selfAnnounce);
         WATCH(locator);
@@ -102,14 +110,17 @@ void UniSphereControlPlane::announceOurselves() {
     // Announce ourselves to all neighbours and send them routing updates
     for (auto peer: getConnectedNodes(irt)) {
 //        selfAnnounce->seqno++; //FIXME: seqno not updated in U-Sphere???
-        auto payload = selfAnnounce->exportEntry();
-        ASSERT(payload->getOrigin() == payload->getForward_path().top());
-        sendToNeighbour(getHostID(peer), payload);
-
-        // Send full routing table to neighbor
-        fullUpdate(getHostID(peer));
+        announceOurselves(peer);
     }
     scheduleAfter(interval_announce, selfMsg);
+}
+void UniSphereControlPlane::announceOurselves(cModule* peer) {
+    auto payload = selfAnnounce->exportEntry();
+    ASSERT(payload->getOrigin() == payload->getForward_path().top());
+    sendToNeighbour(getHostID(peer), payload);
+
+    // Send full routing table to neighbor
+    fullUpdate(getHostID(peer));
 }
 
 void UniSphereControlPlane::processPacket(Packet *pkt) {
@@ -136,7 +147,6 @@ void UniSphereControlPlane::processPacket(Packet *pkt) {
 //            auto payload = staticPtrCast<PathAnnounce>(ctrlMessage->dupShared()); //FIXME dupShared()??
 //            payload->setChunkLength(payload->getChunkLength()+B(1)); // FIXME
 //            payload->appendForward_path(getHostID(host)); // add ourselves to forward path
-
             sendToNeighbourProtected(getHostID(peer), route);
         }
     }
@@ -309,6 +319,9 @@ bool UniSphereControlPlane::sendToNeighbourProtected(L3Address neighbour, UniSph
     // Retrieve ID(vport in U-Sphere) for given peer
     // & don't send if the entry is originally coming from that neighbour
     if (neighbour == entry->getNextHopAsGeneric())
+        return false;
+    // don't send entries when forwarding disabled (for MNs, most simple implementation of multiple end-point DTPMs)
+    if (!forwarding)
         return false;
 
     sendToNeighbour(neighbour, payload);

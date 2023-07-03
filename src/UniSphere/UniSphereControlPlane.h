@@ -61,10 +61,14 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     cMessage *selfMsg = nullptr;
     UniSphereRoute *selfAnnounce = nullptr;
     UniSphereLocator locator; // we only need to keep the last, because all packets are accepted regardless of Loc
+    bool forwarding = false;
 
     // parameters
     cModule *host = nullptr;
+    // we seperate the DTPMs by seperating the RTs and always setting an active routing table when working
+    //irtActive;
     inet::ModuleRefByPar<inet::IRoutingTable> irt;
+//    opp_component_ptr<inet::IRoutingTable> irtOld;
     inet::ModuleRefByPar<inet::IInterfaceTable> ift;
 
     cGate *peerIn = nullptr;
@@ -76,6 +80,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void handleMessageWhenUp(cMessage *msg) override;
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override {}
     virtual void announceOurselves();
+    virtual void announceOurselves(cModule* peer);
     virtual void processPacket(inet::Packet *pkt);
     virtual bool importRoute(UniSphereRoute *route);
     virtual bool keepBestRoute(UniSphereRoute* newRoute, UniSphereRoute* oldRoute);
