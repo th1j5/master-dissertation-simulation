@@ -28,7 +28,6 @@
 using namespace inet; // more OK to use in .cc
 Define_Module(UniSphereControlPlane);
 
-const inet::Protocol *UniSphereControlPlane::unisphere = new Protocol("unisphere", "U-Sphere");
 const simsignal_t UniSphereControlPlane::newNeighbourConnectedSignal = cComponent::registerSignal("newNeighConnected");
 
 UniSphereControlPlane::UniSphereControlPlane() {
@@ -59,7 +58,9 @@ void UniSphereControlPlane::initialize(int stage) {
         peerOut = gate("networkLayerOut");
         forwarding = par("forwarding");
 
-        if (!ProtocolGroup::getIpProtocolGroup()->findProtocol(protocolId)) { // one-shot execution
+        unisphere = ProtocolGroup::getIpProtocolGroup()->findProtocol(protocolId);
+        if (!unisphere) { // one-shot execution
+            unisphere = new Protocol("unisphere", "U-Sphere");
             ProtocolGroup::getIpProtocolGroup()->addProtocol(protocolId, unisphere);
         }
     }

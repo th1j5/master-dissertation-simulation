@@ -56,7 +56,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
   protected:
     // 200 should be available, see 'networklayer/common/IpProtocolId.msg'
     static const int protocolId = 200;
-    static const inet::Protocol *unisphere;
+    const inet::Protocol *unisphere;
 
     // state
     cMessage *selfMsg = nullptr;
