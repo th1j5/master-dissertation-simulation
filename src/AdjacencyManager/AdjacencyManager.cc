@@ -69,7 +69,18 @@ void AdjacencyManager::initialize(int stage) {
     }
 }
 
-// TODO what are the semantics of this?? does it connects IPCPs or Locs or ...?
+/**
+ *  Connect two peers, with configurable policy.
+ *  - policy A: connect a new DTPM (effectively disabling 'forwarding' for this node)
+ *    - This might have the same Locator
+ *    - This probably will have a different DTPM address.
+ *  - policy B: connect with existing DTPM.
+ *    - This request might be rejected.
+ *    - This request might change the Locator. If this does not change the DTPM (like in U-Sphere), no problem.
+ *      Otherwise it will be rejected & policy A will be tried.
+ *  - static IP routes: we try to stay away from this if possible, due to being it a mess.
+ *    We fix them at the start of the simulation (with Configurator) and then we only care about the MNs, policy A.
+ */
 void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface) {
     //FIXME (will probably result in mayhem - or not, apparently, MODULEID doesn't even uses this, but IPvX & MODULEPATH does)
     // see routerId remark at start
@@ -128,8 +139,11 @@ void AdjacencyManager::receiveSignal(cComponent *source, simsignal_t signalID, c
         EV_WARN << "Connected to: "; print(connectedNodes); EV_WARN << endl;
         if (!nodesInRangeSorted.empty()) {
             EV_WARN << "Connecting to:" << nodesInRangeSorted.back() << endl;
-            // connect
-            connectNode(nodesInRangeSorted.back(), ift->findInterfaceByName("wlan0"));
+            // connect BOTH sides
+            auto *neigh = nodesInRangeSorted.back();
+            AdjacencyManager* neighAdjMgmt = check_and_cast<AdjacencyManager*>(neigh->getSubmodule("adjacencyManager"));
+            connectNode(neigh, ift->findInterfaceByName("wlan0"));
+            neighAdjMgmt->connectNode(host, neighAdjMgmt->ift->findInterfaceByName("wlan0"));
         }
         // disconnect
         // (when out-of-reach)
