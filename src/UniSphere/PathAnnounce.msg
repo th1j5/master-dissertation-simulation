@@ -34,3 +34,8 @@ class PathAnnounce extends inet::FieldsChunk {
     // Cryptographic path delegation chain
     //repeated bytes delegation_chain = 6;
 }
+
+class PathRetract extends inet::FieldsChunk {
+    inet::L3Address destination; // retracted destination
+    inet::L3Address originNeigh; // ID of the neigh sending this retraction
+}

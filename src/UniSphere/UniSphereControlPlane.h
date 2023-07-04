@@ -90,10 +90,12 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual bool importRoute(UniSphereRoute *route);
     virtual bool keepBestRoute(UniSphereRoute* newRoute);
     virtual bool retract(inet::L3Address dest);
+    virtual bool retract(inet::L3Address neighSource, inet::L3Address dest);
+    virtual void sendRetractToAllNeighbours(UniSphereRoute* route);
     size_t getMaximumVicinitySize() const;
     CurrentVicinity getCurrentVicinity() const;
     virtual bool sendToNeighbourProtected(inet::L3Address neigbour, UniSphereRoute* entry);
-    virtual void sendToNeighbour(inet::L3Address neigbour, inet::Ptr<PathAnnounce> payload); // == ribExportQueueAnnounce in U-Sphere
+    virtual void sendToNeighbour(inet::L3Address neigbour, inet::Ptr<inet::FieldsChunk> payload); // == ribExportQueueAnnounce in U-Sphere
     void fullUpdate(inet::L3Address neighbour);
 
     virtual bool selectLocalAddress();

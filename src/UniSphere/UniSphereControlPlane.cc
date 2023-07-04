@@ -302,6 +302,43 @@ bool UniSphereControlPlane::retract(L3Address dest) {
     // TODO: send retract entry signals
     return numDeleted > 0;
 }
+bool UniSphereControlPlane::retract(L3Address neighSource, L3Address dest) {
+    for (int i=0; i < irt->getNumRoutes(); i++) {
+        auto *e = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
+        if (neighSource == e->getNextHopAsGeneric()
+                && (dest.isUnspecified() || dest == e->getDestinationAsGeneric())) {
+            // U-Sphere: determine new active route, only send if changed
+            if (e->active && true)
+                sendRetractToAllNeighbours(e);
+            irt->deleteRoute(e);
+            //TODO: U-Sphere
+            //select better route (is hard with our scheme, because we don't keep any non-active routes)
+            // U-Sphere is an extension of DVR, where multiple advertisements for the same dest are kept
+            // Also a bit like Babel (there, the feasibility condition decides, what we have here is starvation)
+        }
+    }
+    return false;
+}
+// ribRetractEntry() in U-Sphere
+void UniSphereControlPlane::sendRetractToAllNeighbours(UniSphereRoute* route) {
+    //Protected
+    if (!forwarding)
+        return;
+    // Announce ourselves to all neighbours and send them routing updates
+    for (auto peer: getConnectedNodes(irt)) {
+        auto peerID = getHostID(peer);
+//        selfAnnounce->seqno++; //FIXME: seqno not updated in U-Sphere???
+        auto payload = makeShared<PathRetract>();
+        payload->setDestination(route->getDestinationAsGeneric());
+        payload->setOriginNeigh(getHostID(host));
+        payload->setChunkLength(B(1));
+        //Protected
+        if (peerID == route->getNextHopAsGeneric())
+            continue;
+
+        sendToNeighbour(peerID, payload);
+    }
+}
 
 void UniSphereControlPlane::fullUpdate(L3Address neighbour) {
     for (int i = 0; i < irt->getNumRoutes(); ++i) {
@@ -370,7 +407,7 @@ bool UniSphereControlPlane::sendToNeighbourProtected(L3Address neighbour, UniSph
     sendToNeighbour(neighbour, payload);
     return true;
 }
-void UniSphereControlPlane::sendToNeighbour(L3Address neighbour, inet::Ptr<PathAnnounce> payload) {
+void UniSphereControlPlane::sendToNeighbour(L3Address neighbour, inet::Ptr<inet::FieldsChunk> payload) {
     // could buffer before sending (see U-Sphere, CompactRouterPrivate::ribExportQueueAnnounce)
     short ttl = 1;
     Packet *pkt = new Packet("PathAnnounce", payload);
