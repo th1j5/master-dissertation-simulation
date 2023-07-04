@@ -143,11 +143,10 @@ void AdjacencyManager::receiveSignal(cComponent *source, simsignal_t signalID, c
         // make decisions to adjust graph
         ASSERT((std::string) host->getNedTypeName() == "prototype.LocNodes.MobileNode");
 
-        auto nodesInRangeSorted = getNodesInRangeSorted();
+        auto nodesInRangeSorted = getAPsInRangeSorted();
         auto connectedNodes = getConnectedNodes(irt);
         EV_WARN << "Connected to: "; print(connectedNodes); EV_WARN << endl;
         if (!nodesInRangeSorted.empty()) {
-            // TODO: don't connect MNs
             EV_WARN << "Connecting to:" << nodesInRangeSorted.back() << endl;
             // connect BOTH sides
             auto *neigh = nodesInRangeSorted.back();
@@ -158,21 +157,24 @@ void AdjacencyManager::receiveSignal(cComponent *source, simsignal_t signalID, c
         // disconnect
         // (when out-of-reach)
         for (auto n: connectedNodes) {
-            if (!contains(nodesInRangeSorted, n))
+            if (!contains(nodesInRangeSorted, n)) {
+                AdjacencyManager* neighAdjMgmt = check_and_cast<AdjacencyManager*>(n->getSubmodule("adjacencyManager"));
                 disconnectNode(n);
+                neighAdjMgmt->disconnectNode(host);
+            }
         }
     }
     else throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
 }
 
-AdjacencyManager::SortedDistanceList AdjacencyManager::getNodesInRangeSorted() {
+AdjacencyManager::SortedDistanceList AdjacencyManager::getAPsInRangeSorted() {
     auto cmp = [this](cModule* const& left, cModule* const& right) { return this->getDistance(left) > this->getDistance(right); };
 //    std::priority_queue<cModule*, std::vector<cModule*>, decltype(cmp)> nodes(cmp);
     std::vector<cModule*> nodes;
     // Loop through all modules and find those that satisfy the criteria
     for (int modId = 0; modId <= getSimulation()->getLastComponentId(); modId++) {
         cModule *module = getSimulation()->getModule(modId);
-        if (module && isWirelessNodeAndInRange(module)) {
+        if (module && isWirelessAPAndInRange(module)) {
             nodes.push_back(module);
         }
     }
@@ -186,7 +188,8 @@ AdjacencyManager::SortedDistanceList AdjacencyManager::getNodesInRangeSorted() {
 //    return getDistance(left) > getDistance(right);
 //}
 
-bool AdjacencyManager::isWirelessNodeAndInRange(cModule *module) {
+/* Only return NeighbourNodes aka APs/Access Points */
+bool AdjacencyManager::isWirelessAPAndInRange(cModule *module) {
     // filter out this.host if "prototype.LocNodes.MobileNode" is also allowed
     const std::vector<std::string>& v {(std::string)"prototype.LocNodes.NeighbourNode"};
     if (!contains(v, module->getNedTypeName()))
