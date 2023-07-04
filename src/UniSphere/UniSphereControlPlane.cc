@@ -29,6 +29,7 @@ using namespace inet; // more OK to use in .cc
 Define_Module(UniSphereControlPlane);
 
 const simsignal_t UniSphereControlPlane::newNeighbourConnectedSignal = cComponent::registerSignal("newNeighConnected");
+const simsignal_t UniSphereControlPlane::oldNeighbourDisconnectedSignal = cComponent::registerSignal("oldNeighDisconnected");
 
 UniSphereControlPlane::UniSphereControlPlane() {
     // TODO Auto-generated constructor stub
@@ -39,6 +40,8 @@ UniSphereControlPlane::~UniSphereControlPlane() {
     delete selfAnnounce;
     if (host != nullptr && host->isSubscribed(newNeighbourConnectedSignal, this))
         host->unsubscribe(newNeighbourConnectedSignal, this);
+    if (host != nullptr && host->isSubscribed(oldNeighbourDisconnectedSignal, this))
+            host->unsubscribe(oldNeighbourDisconnectedSignal, this);
 //    if (irtOld) {
 //        auto *mod = check_and_cast<cModule*>(irtOld.get());
 //        mod->deleteModule();
@@ -77,6 +80,7 @@ void UniSphereControlPlane::initialize(int stage) {
 
         // subscribe
         host->subscribe(newNeighbourConnectedSignal, this);
+        host->subscribe(oldNeighbourDisconnectedSignal, this);
 
         // init ourselves
         selfAnnounce->setDestination(getHostID(host));
@@ -359,6 +363,10 @@ void UniSphereControlPlane::receiveSignal(cComponent *source, simsignal_t signal
         }
     }
     //case /*TODO: peerRemoved*/:
+    else if (signalID == oldNeighbourDisconnectedSignal) {
+        L3Address peerID = getHostID(check_and_cast<cModule*>(neigh));
+        retract(peerID, L3Address());
+    }
     /*case routingEntryExpired?*/
     else
         throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));

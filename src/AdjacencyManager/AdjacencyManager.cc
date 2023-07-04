@@ -107,6 +107,8 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
     }
 
     if (isUniSphere() && !routeAlreadyPresent) {
+        // preload neigh in RT, such that the DataPlane knows where to send packets
+        // Would not be needed if a N-1 flow would be used instead of the NextHop Dataplane (see Ouroboros)
         UniSphereRoute* route = new UniSphereRoute(peerID);
         route->setInterface(iface);
 //        route->setLandmark()
@@ -124,16 +126,22 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
     }
 }
 void AdjacencyManager::disconnectNode(cModule* neighbour) {
-    L3Address peerID = getHostID(neighbour);
-
-    IRoute *e = irt->findBestMatchingRoute(peerID);
-    while (e != nullptr
-                && e->getDestinationAsGeneric() == peerID
-                && e->getNextHopAsGeneric() == peerID
-                && e->getMetric() == 0)
-    {
-        irt->deleteRoute(e);
-        e = irt->findBestMatchingRoute(peerID);
+    if (isUniSphere()) {
+        emit(UniSphereControlPlane::oldNeighbourDisconnectedSignal, neighbour);
+        // announce Ourselves?? to prevent starvation
+    }
+    else {
+        //TODO
+//        L3Address peerID = getHostID(neighbour);
+//        IRoute *e = irt->findBestMatchingRoute(peerID);
+//        while (e != nullptr
+//                    && e->getDestinationAsGeneric() == peerID
+//                    && e->getNextHopAsGeneric() == peerID
+//                    && e->getMetric() == 0)
+//        {
+//            irt->deleteRoute(e);
+//            e = irt->findBestMatchingRoute(peerID);
+//        }
     }
 }
 
