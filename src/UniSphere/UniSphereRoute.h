@@ -34,8 +34,12 @@ class UniSphereRoute: public inet::NextHopRoute {
      * Can be used for differentiating between routes only used as placeholders for neighbours and ...
      * The only reason to keep non-active routes around is when a retraction happens
      */
-    bool active = false;
+    bool active = false; // U-Sphere semantics, not too much used here
     bool vicinity = false;
+    /* For each *MN*, the RIB is increased with each added peer (to uphold the division between DTPMs and their RIB)
+     * This is the easiest way (right now) to split the tables.
+     */
+    int RIB = 0; // to which DTPM/RIB does this belong?
     uint32_t seqno = 0;
     RoutingPath forwardPath;
     RoutingPath reversePath;

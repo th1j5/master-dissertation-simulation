@@ -63,6 +63,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     cMessage *selfMsg = nullptr;
     UniSphereRoute *selfAnnounce = nullptr;
     UniSphereLocator locator; // we only need to keep the last, because all packets are accepted regardless of Loc
+    // UniSphereLocator oldLocator;
     bool forwarding = false;
 
     // parameters
@@ -84,6 +85,8 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual void announceOurselves();
     virtual void announceOurselves(cModule* peer);
     virtual void processPacket(inet::Packet *pkt);
+    virtual void processPathAnnounce(inet::Packet *pkt);
+    virtual void processPathRetract(inet::Ptr<const PathRetract> ctrlMessage);
     virtual bool importRoute(UniSphereRoute *route);
     virtual bool keepBestRoute(UniSphereRoute* newRoute);
     virtual bool retract(inet::L3Address dest);

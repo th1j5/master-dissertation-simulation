@@ -94,6 +94,12 @@ void UniSphereForwarding::routePacket(Packet *datagram, const NetworkInterface *
         if (re == nullptr && header->getPath().size() > 0) {
             // try to find landmark/next hop
             RoutingPath path = header->getPath();
+            // landmark could be the sending node...
+            if (routingTable->isLocalAddress(path.top())) {
+                path.pop();
+                // This should mean that this packets comes from this node && this node is a landmark
+                EV_WARN << "NextHop in RoutingPath is local address" << endl;
+            }
             re = routingTable->findBestMatchingRoute(path.top()); //FIXME: check correctness
             // if it is the nexthop, pop it from the path
             if (re != nullptr && re->getNextHopAsGeneric() == path.top()) {

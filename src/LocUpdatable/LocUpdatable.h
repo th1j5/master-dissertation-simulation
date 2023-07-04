@@ -30,6 +30,8 @@ class LocUpdatable {
     // statistics
     int numLocUpdates = -1; // First send is 0
     int numLocUpdateSend = 0;
+    int numNewNeighConnected = 0;
+
 
     // parameters
     cModule *host = nullptr;

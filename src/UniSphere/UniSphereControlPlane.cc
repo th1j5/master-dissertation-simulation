@@ -15,7 +15,7 @@
 
 #include "UniSphereControlPlane.h"
 #include "PathAnnounce_m.h"
-#include "../util.h"
+#include "util.h"
 
 #include "inet/common/ProtocolTag_m.h"
 #include "inet/common/ProtocolGroup.h"
@@ -126,11 +126,26 @@ void UniSphereControlPlane::announceOurselves(cModule* peer) {
     ASSERT(payload->getOrigin() == payload->getForward_path().top());
     sendToNeighbour(getHostID(peer), payload);
 
-    // Send full routing table to neighbor
+    // Send full routing table to neighbor (if not MN)
     fullUpdate(getHostID(peer));
 }
 
 void UniSphereControlPlane::processPacket(Packet *pkt) {
+    if (auto ctrlMessage = dynamicPtrCast<const PathAnnounce>(pkt->peekAtFront())) {
+        processPathAnnounce(pkt);
+    }
+    else if (auto ctrlMessage = dynamicPtrCast<const PathRetract>(pkt->peekAtFront())) {
+        processPathRetract(ctrlMessage);
+    }
+    else
+        throw cRuntimeError("Unrecognized control packet");
+    delete pkt;
+}
+void UniSphereControlPlane::processPathRetract(Ptr<const PathRetract> ctrlMessage) {
+    L3Address getSendingNeighbour = ctrlMessage->getOriginNeigh();
+    retract(getSendingNeighbour, ctrlMessage->getDestination());
+}
+void UniSphereControlPlane::processPathAnnounce(Packet *pkt) {
     auto ctrlMessage = dynamicPtrCast<const PathAnnounce>(pkt->popAtFront());
     EV_WARN << "Received message" << ctrlMessage << endl;
     /* social/compact_router.cpp:663 */
@@ -139,6 +154,8 @@ void UniSphereControlPlane::processPacket(Packet *pkt) {
     /* Prepare routing entry */
     UniSphereRoute *route = new UniSphereRoute(ctrlMessage);
     route->setInterface(getSourceInterfaceFrom(pkt)); //TODO: does this mean something for our thesissimulation?? Is it a restriction??
+    if (!forwarding)
+        route->RIB = numNewNeighConnected;
 
     /* attempt to import if better route */
     // in U-Sphere, a route can be imported, even if it's not better TODO
@@ -157,8 +174,6 @@ void UniSphereControlPlane::processPacket(Packet *pkt) {
             sendToNeighbourProtected(getHostID(peer), route);
         }
     }
-
-    delete pkt;
 }
 
 /* @return bool is the new route imported?*/
@@ -259,6 +274,7 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
 }
 
 bool UniSphereControlPlane::keepBestRoute(UniSphereRoute* newRoute) {
+    // TODO: look at RIB information?
     // if there is no oldRoute OR if the newRoute is better, add newRoute
     L3Address origin = newRoute->getDestinationAsGeneric();
     auto *oldRoute = check_and_cast_nullable<UniSphereRoute*>(irt->findBestMatchingRoute(origin));
@@ -300,6 +316,10 @@ void UniSphereControlPlane::receiveSignal(cComponent *source, simsignal_t signal
     Enter_Method("%s", cComponent::getSignalName(signalID));
     if (signalID == newNeighbourConnectedSignal) {
         announceOurselves(check_and_cast<cModule*>(neigh));
+        numNewNeighConnected++;
+        if (!forwarding) {
+            // Update RIB separation IF I'm a MN
+        }
     }
     //case /*TODO: peerRemoved*/:
     /*case routingEntryExpired?*/
@@ -377,6 +397,10 @@ void UniSphereControlPlane::networkSizeEstimateChanged(int size) {
 }
 
 bool UniSphereControlPlane::selectLocalAddress() {
+    /**
+     * only select from the latest DTPM or RIB
+     * This means that we proactively choose the landmark to change
+     */
     auto selfID = getHostID(host);
     if (selfAnnounce->isLandmark()) {
         if (locator.ID == selfID && locator.path.size() == 0)
@@ -390,7 +414,9 @@ bool UniSphereControlPlane::selectLocalAddress() {
         for (int i = 0; i < irt->getNumRoutes(); ++i) {
             UniSphereRoute* re = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
             if (re->isLandmark()
-                    && (bestLandmark == nullptr || re->getMetric() < bestLandmark->getMetric())) {
+                    && (bestLandmark == nullptr || re->RIB >= bestLandmark->RIB)
+                    && (bestLandmark == nullptr || re->getMetric() < bestLandmark->getMetric()))
+            {
                 bestLandmark = re;
             }
         }
