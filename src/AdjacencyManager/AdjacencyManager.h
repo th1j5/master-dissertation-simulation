@@ -42,8 +42,11 @@ class AdjacencyManager: public omnetpp::cSimpleModule, public cListener {
     virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
     virtual void initialize(int stage) override;
     virtual bool connectNode(cModule*, inet::NetworkInterface * iface);
+    virtual bool connectNodeTwoSided(cModule*);
     virtual void disconnectNode(cModule*);
+    virtual void disconnectNodeTwoSided(cModule*);
 
+    virtual void changeTopologyPolicyMN();
 //    virtual void addNeighbourRoute() override;
     virtual SortedDistanceList getAPsInRangeSorted();
     virtual bool isWirelessAPAndInRange(cModule *module);

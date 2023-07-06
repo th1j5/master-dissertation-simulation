@@ -102,7 +102,8 @@ bool AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
     L3Address peerID = getHostID(neighbour);
 
     // check if already in RoutingTable
-    bool routeAlreadyPresent = false;
+    // FIXME: change for IPv4 <-> U-Sphere
+//    bool routeAlreadyPresent = false;
     IRoute *e = irt->findBestMatchingRoute(peerID);
     if (e != nullptr
             && e->getDestinationAsGeneric() == peerID
@@ -110,10 +111,12 @@ bool AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
 //            && e->getInterface() == iface //FIXME!
             && e->getMetric() == 0)
     {
-        routeAlreadyPresent = true;
+        throw cRuntimeError("Node already connected. Function does not accept redundant calls.");
+        // TODO: do we need more in connectNode, besides this check?
+//        routeAlreadyPresent = true;
     }
 
-    if (isUniSphere() && !routeAlreadyPresent) {
+    if (isUniSphere()) {
         // preload neigh in RT, such that the DataPlane knows where to send packets
         // Would not be needed if a N-1 flow would be used instead of the NextHop Dataplane (see Ouroboros)
         UniSphereRoute* route = new UniSphereRoute(peerID);
@@ -125,7 +128,7 @@ bool AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
 //        route->setPrefixLength(longestPrefix);
         irt->addRoute(route);
     }
-    else if (!isUniSphere() && !routeAlreadyPresent) {
+    else if (!isUniSphere()) {
         // IPv4 case
         // Implement
         // Only send a signal if you are the node initiating a connection.
@@ -133,8 +136,26 @@ bool AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
 
     }
     emit(newNeighbourConnectedSignal, neighbour);
+    return true;
+}
+bool AdjacencyManager::connectNodeTwoSided(cModule* neigh) {
+    EV_WARN << "Connecting to:" << neigh << endl;
+    // connect BOTH sides
+    AdjacencyManager* neighAdjMgmt = check_and_cast<AdjacencyManager*>(neigh->getSubmodule("adjacencyManager"));
+    bool me = connectNode(neigh, ift->findInterfaceByName("wlan0"));
+    bool you = neighAdjMgmt->connectNode(host, neighAdjMgmt->ift->findInterfaceByName("wlan0"));
+    ASSERT(me == you);
+    return me;
+}
+void AdjacencyManager::disconnectNodeTwoSided(cModule* neighbour) {
+    AdjacencyManager* neighAdjMgmt = check_and_cast<AdjacencyManager*>(neighbour->getSubmodule("adjacencyManager"));
+    disconnectNode(neighbour);
+    neighAdjMgmt->disconnectNode(host);
 }
 void AdjacencyManager::disconnectNode(cModule* neighbour) {
+    auto connectedNodes = getConnectedNeigh(irt);
+    ASSERT(contains(connectedNodes, neighbour));
+
     if (isUniSphere()) {
         emit(oldNeighbourDisconnectedSignal, neighbour);
         // announce Ourselves?? to prevent starvation
@@ -160,28 +181,42 @@ void AdjacencyManager::receiveSignal(cComponent *source, simsignal_t signalID, c
         // make decisions to adjust graph
         ASSERT((std::string) host->getNedTypeName() == "prototype.LocNodes.MobileNode");
 
-        auto nodesInRangeSorted = getAPsInRangeSorted();
-        auto connectedNodes = getConnectedNodes(irt);
-        EV_WARN << "Connected to: "; print(connectedNodes); EV_WARN << endl;
-        if (!nodesInRangeSorted.empty()) {
-            EV_WARN << "Connecting to:" << nodesInRangeSorted.back() << endl;
-            // connect BOTH sides
-            auto *neigh = nodesInRangeSorted.back();
-            AdjacencyManager* neighAdjMgmt = check_and_cast<AdjacencyManager*>(neigh->getSubmodule("adjacencyManager"));
-            connectNode(neigh, ift->findInterfaceByName("wlan0"));
-            neighAdjMgmt->connectNode(host, neighAdjMgmt->ift->findInterfaceByName("wlan0"));
-        }
-        // disconnect
-        // (when out-of-reach)
-        for (auto n: connectedNodes) {
-            if (!contains(nodesInRangeSorted, n)) {
-                AdjacencyManager* neighAdjMgmt = check_and_cast<AdjacencyManager*>(n->getSubmodule("adjacencyManager"));
-                disconnectNode(n);
-                neighAdjMgmt->disconnectNode(host);
-            }
-        }
+        changeTopologyPolicyMN();
     }
     else throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
+}
+/**
+ * MN specific part, policy about how/when to connect
+ * Always connect to the closest neigh.
+ * Only ever keep 2 connections.
+ * On a new connection, replace the oldest neigh.
+ */
+void AdjacencyManager::changeTopologyPolicyMN() {
+    auto nodesInRangeSorted = getAPsInRangeSorted();
+    auto connectedNodes = getConnectedNeigh(irt);
+    EV_WARN << "Connected to: "; print(connectedNodes); EV_WARN << endl;
+
+    if (!nodesInRangeSorted.empty()) {
+        auto *neigh = nodesInRangeSorted.back();
+        // connect closest neigh
+        if (!contains(connectedNodes, neigh)) {
+            // CHANGE TOPOLOGY
+            // DISCONNECT OLD (furthest) - policy because we only have limited (here: 2) antennas to connect
+            auto cmp = [this](cModule* const& left, cModule* const& right) { return this->getDistance(left) > this->getDistance(right); };
+            std::sort(connectedNodes.begin(), connectedNodes.end(), cmp);
+            // keep closest 1 node
+            for (const auto& oldNeigh: drop_last(connectedNodes))
+                disconnectNodeTwoSided(oldNeigh);
+            // CONNECT NEW
+            connectNodeTwoSided(neigh);
+        }
+    }
+    // disconnect (when out-of-reach)
+    for (auto n: getConnectedNeigh(irt)) { // refresh connectedNeigh info
+        if (!contains(nodesInRangeSorted, n)) {
+            disconnectNodeTwoSided(n);
+        }
+    }
 }
 
 AdjacencyManager::SortedDistanceList AdjacencyManager::getAPsInRangeSorted() {

@@ -126,4 +126,22 @@ static bool isUniSphere() {
     }
 }
 
+// https://stackoverflow.com/a/51217509
+template <typename It>
+struct iterator_pair {
+    It b, e;
+
+    It begin() const { return b; }
+    It end() const { return e; }
+};
+
+// Drop last element of vector/... when iterating over it
+// Used to enforce policy on the amount of connections kept by a MN
+template <typename Range>
+static auto drop_last(Range& r)
+    -> iterator_pair<decltype(r.begin())>
+{
+    return {r.begin(), r.begin() == r.end() ? r.end() : std::prev(r.end())};
+}
+
 #endif /* UTIL_H_ */
