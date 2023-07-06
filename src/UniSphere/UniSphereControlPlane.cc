@@ -117,7 +117,7 @@ void UniSphereControlPlane::handleMessageWhenUp(cMessage *msg) {
 
 void UniSphereControlPlane::announceOurselves() {
     // Announce ourselves to all neighbours and send them routing updates
-    for (auto peer: getConnectedNodes(irt)) {
+    for (auto peer: getConnectedNeigh(irt)) {
 //        selfAnnounce->seqno++; //FIXME: seqno not updated in U-Sphere???
         announceOurselves(peer);
     }
@@ -169,7 +169,7 @@ void UniSphereControlPlane::processPathAnnounce(Packet *pkt) {
     //TODO
     if (isImported) {
 
-        for (auto peer: getConnectedNodes(irt)) {
+        for (auto peer: getConnectedNeigh(irt)) {
 //            auto payload = staticPtrCast<PathAnnounce>(ctrlMessage->dupShared()); //FIXME dupShared()??
 //            payload->setChunkLength(payload->getChunkLength()+B(1)); // FIXME
 //            payload->appendForward_path(getHostID(host)); // add ourselves to forward path
@@ -328,7 +328,7 @@ void UniSphereControlPlane::sendRetractToAllNeighbours(UniSphereRoute* route) {
     if (!forwarding)
         return;
     // Announce ourselves to all neighbours and send them routing updates
-    for (auto peer: getConnectedNodes(irt)) {
+    for (auto peer: getConnectedNeigh(irt)) {
         auto peerID = getHostID(peer);
 //        selfAnnounce->seqno++; //FIXME: seqno not updated in U-Sphere???
         auto payload = makeShared<PathRetract>();

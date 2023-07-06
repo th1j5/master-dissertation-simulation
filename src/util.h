@@ -48,7 +48,7 @@ static bool isUnitializedNeighbour(const UniSphereRoute *entry) {
 }
 }
 
-static std::vector<cModule*> getConnectedNodes(inet::ModuleRefByPar<inet::IRoutingTable> irt) {
+static std::vector<cModule*> getConnectedNeigh(inet::ModuleRefByPar<inet::IRoutingTable> irt) {
     std::vector<cModule*> nodes;
     for (int i=0; i<irt->getNumRoutes(); i++) {
         inet::IRoute *e = irt->getRoute(i);

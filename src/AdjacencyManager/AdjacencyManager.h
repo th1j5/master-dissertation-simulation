@@ -41,7 +41,7 @@ class AdjacencyManager: public omnetpp::cSimpleModule, public cListener {
 
     virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
     virtual void initialize(int stage) override;
-    virtual void connectNode(cModule*, inet::NetworkInterface * iface);
+    virtual bool connectNode(cModule*, inet::NetworkInterface * iface);
     virtual void disconnectNode(cModule*);
 
 //    virtual void addNeighbourRoute() override;

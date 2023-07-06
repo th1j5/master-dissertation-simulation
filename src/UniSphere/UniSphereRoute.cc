@@ -25,7 +25,7 @@ UniSphereRoute::UniSphereRoute(Ptr<const PathAnnounce> ctrlMessage) {
 }
 
 UniSphereRoute::UniSphereRoute(L3Address neighbour) {
-    // Install an incomplete route, used for getConnectedNodes (i.e. neighbour detection)
+    // Install an incomplete route, used for getConnectedNeigh (i.e. neighbour detection)
     // Don't make it active, because we don't know some import properties
     setDestination(neighbour);
     setNextHop(neighbour);

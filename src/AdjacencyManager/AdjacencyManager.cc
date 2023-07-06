@@ -89,8 +89,12 @@ void AdjacencyManager::initialize(int stage) {
  *
  *  The DTPM address is decided/assigned/received in the Control Plane.
  *  Here, it is implemented in the AdjMgmt for IPv4, as a stop-gap measure.
+ *
+ *  Idempotent function (assertion, because we want to detect logic failures)
+ *  Return: succes or fail
+ *  ASSERT(!already connected), because we want to detect multiple redundant calls
  */
-void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface) {
+bool AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface) {
     //FIXME (will probably result in mayhem - or not, apparently, MODULEID doesn't even uses this, but IPvX & MODULEPATH does)
     // see routerId remark at start
     int longestPrefix = std::numeric_limits<int>::max();

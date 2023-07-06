@@ -42,8 +42,8 @@ module ScalableRouter extends Router {
         hierLocAssignAlgo: HierarchicalLocAssignAlgo if exists(ipv4) {
             parameters:
                 @display("p=1000,226");
-                string server = true;
-                string client = false;
+                server = true;
+                client = false;
                 // server/responder?
         }
     connections:
@@ -73,8 +73,8 @@ module MobileScalableRouter extends ManetRouter {
         hierLocAssignAlgo: HierarchicalLocAssignAlgo if exists(ipv4) {
             parameters:
                 @display("p=1000,226");
-                string server = false;
-                string client = true;
+                server = false;
+                client = true;
                 // client/requestor?
         }
     connections:

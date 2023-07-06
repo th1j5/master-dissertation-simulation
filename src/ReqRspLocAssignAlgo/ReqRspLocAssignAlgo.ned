@@ -23,6 +23,8 @@ simple HierarchicalLocAssignAlgo {
         @class(HierarchicalLocAssignAlgo);
         string routingTableModule;
         string interfaceTableModule;
+        bool client;
+        bool server;
     gates:
         input networkLayerIn;
         output networkLayerOut;
