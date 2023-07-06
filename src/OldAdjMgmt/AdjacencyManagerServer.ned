@@ -14,7 +14,7 @@
 // 
 
 //package prototype.AdjacencyManager;
-package prototype.LocAssignAlgo;
+package prototype.OldAdjMgmt;
 
 import inet.applications.contract.IApp;
 
