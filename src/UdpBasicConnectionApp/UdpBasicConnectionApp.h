@@ -35,7 +35,7 @@ protected:
     std::vector<double> corrID_MN;
     std::vector<Locator> destAddresses;
     const char * const locUpdateName = "LocUpdate";
-    opp_component_ptr<LocUpdatable> controlPlane;
+    opp_component_ptr<LocUpdatable> controlPlaneLocAssignable;
     //inet::ModuleRefByPar<AdjacencyManagerOld> adjMgmt;
 
     // statistics

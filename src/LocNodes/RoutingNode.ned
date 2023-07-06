@@ -20,6 +20,7 @@ import inet.applications.contract.IApp;
 
 import prototype.AdjacencyManager.*;
 import prototype.UniSphere.*;
+import prototype.ReqRspLocAssignAlgo.*;
 
 //
 // TODO auto-generated module
@@ -27,6 +28,8 @@ import prototype.UniSphere.*;
 module ScalableRouter extends Router {
     parameters:
         *.routingTableModule = default("^.generic.routingTable");
+//        string routingTableModule = default(absPath("^.generic.routingTable"));
+//        *.routingTableModule = this.routingTableModule;
     submodules:
         adjacencyManager: AdjacencyManager {
             parameters:
@@ -36,13 +39,25 @@ module ScalableRouter extends Router {
             parameters:
                 @display("p=975,226");
         }
+        hierLocAssignAlgo: HierarchicalLocAssignAlgo if exists(ipv4) {
+            parameters:
+                @display("p=1000,226");
+                string server = true;
+                string client = false;
+                // server/responder?
+        }
     connections:
         unisphere.networkLayerOut --> tn.in++ if exists(generic);
         unisphere.networkLayerIn <-- tn.out++ if exists(generic);
+        hierLocAssignAlgo.networkLayerOut --> tn.in++ if exists(ipv4);
+        hierLocAssignAlgo.networkLayerIn <-- tn.out++ if exists(ipv4);
 }
 module MobileScalableRouter extends ManetRouter {
     parameters:
         *.routingTableModule = default("^.generic.routingTable");
+//        string routingTableModule = default(absPath("^.generic.routingTable"));
+//        *.routingTableModule = this.routingTableModule;
+
         forwarding = false;
         // *.forwarding = false; // doesn't work
         //**.forwarding = false; // FIXME: doesn't work
@@ -55,9 +70,18 @@ module MobileScalableRouter extends ManetRouter {
             parameters:
                 @display("p=975,226");
         }
+        hierLocAssignAlgo: HierarchicalLocAssignAlgo if exists(ipv4) {
+            parameters:
+                @display("p=1000,226");
+                string server = false;
+                string client = true;
+                // client/requestor?
+        }
     connections:
         unisphere.networkLayerOut --> tn.in++ if exists(generic);
         unisphere.networkLayerIn <-- tn.out++ if exists(generic);
+        hierLocAssignAlgo.networkLayerOut --> tn.in++ if exists(ipv4);
+        hierLocAssignAlgo.networkLayerIn <-- tn.out++ if exists(ipv4);
 }
 module NeighbourNode extends ScalableRouter {
     parameters:
