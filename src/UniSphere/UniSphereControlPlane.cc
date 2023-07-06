@@ -16,6 +16,7 @@
 #include "UniSphereControlPlane.h"
 #include "PathAnnounce_m.h"
 #include "util.h"
+#include "AdjacencyManager/AdjacencyManager.h"
 
 #include "inet/common/ProtocolTag_m.h"
 #include "inet/common/ProtocolGroup.h"
@@ -28,9 +29,6 @@
 using namespace inet; // more OK to use in .cc
 Define_Module(UniSphereControlPlane);
 
-const simsignal_t UniSphereControlPlane::newNeighbourConnectedSignal = cComponent::registerSignal("newNeighConnected");
-const simsignal_t UniSphereControlPlane::oldNeighbourDisconnectedSignal = cComponent::registerSignal("oldNeighDisconnected");
-
 UniSphereControlPlane::UniSphereControlPlane() {
     // TODO Auto-generated constructor stub
 }
@@ -38,10 +36,10 @@ UniSphereControlPlane::UniSphereControlPlane() {
 UniSphereControlPlane::~UniSphereControlPlane() {
     cancelAndDelete(selfMsg);
     delete selfAnnounce;
-    if (host != nullptr && host->isSubscribed(newNeighbourConnectedSignal, this))
-        host->unsubscribe(newNeighbourConnectedSignal, this);
-    if (host != nullptr && host->isSubscribed(oldNeighbourDisconnectedSignal, this))
-            host->unsubscribe(oldNeighbourDisconnectedSignal, this);
+    if (host != nullptr && host->isSubscribed(AdjacencyManager::newNeighbourConnectedSignal, this))
+        host->unsubscribe(AdjacencyManager::newNeighbourConnectedSignal, this);
+    if (host != nullptr && host->isSubscribed(AdjacencyManager::oldNeighbourDisconnectedSignal, this))
+        host->unsubscribe(AdjacencyManager::oldNeighbourDisconnectedSignal, this);
 //    if (irtOld) {
 //        auto *mod = check_and_cast<cModule*>(irtOld.get());
 //        mod->deleteModule();
@@ -79,8 +77,8 @@ void UniSphereControlPlane::initialize(int stage) {
 //        irtOld = opp_component_ptr<IRoutingTable>(check_and_cast<IRoutingTable*>(mod));
 
         // subscribe
-        host->subscribe(newNeighbourConnectedSignal, this);
-        host->subscribe(oldNeighbourDisconnectedSignal, this);
+        host->subscribe(AdjacencyManager::newNeighbourConnectedSignal, this);
+        host->subscribe(AdjacencyManager::oldNeighbourDisconnectedSignal, this);
 
         // init ourselves
         selfAnnounce->setDestination(getHostID(host));
@@ -355,7 +353,7 @@ void UniSphereControlPlane::fullUpdate(L3Address neighbour) {
 
 void UniSphereControlPlane::receiveSignal(cComponent *source, simsignal_t signalID, cObject *neigh, cObject *details) {
     Enter_Method("%s", cComponent::getSignalName(signalID));
-    if (signalID == newNeighbourConnectedSignal) {
+    if (signalID == AdjacencyManager::newNeighbourConnectedSignal) {
         announceOurselves(check_and_cast<cModule*>(neigh));
         numNewNeighConnected++;
         if (!forwarding) {
@@ -363,7 +361,7 @@ void UniSphereControlPlane::receiveSignal(cComponent *source, simsignal_t signal
         }
     }
     //case /*TODO: peerRemoved*/:
-    else if (signalID == oldNeighbourDisconnectedSignal) {
+    else if (signalID == AdjacencyManager::oldNeighbourDisconnectedSignal) {
         L3Address peerID = getHostID(check_and_cast<cModule*>(neigh));
         retract(peerID, L3Address());
     }

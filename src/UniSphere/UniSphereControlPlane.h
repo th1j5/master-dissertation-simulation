@@ -48,8 +48,6 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
 
 
   public:
-    static const simsignal_t newNeighbourConnectedSignal;
-    static const simsignal_t oldNeighbourDisconnectedSignal;
     virtual UniSphereLocator getLocator() { return locator; }
 
     UniSphereControlPlane();

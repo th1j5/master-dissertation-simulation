@@ -52,8 +52,12 @@ class AdjacencyManager: public omnetpp::cSimpleModule, public cListener {
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override;
 
   public:
+    static const simsignal_t newNeighbourConnectedSignal;
+    static const simsignal_t oldNeighbourDisconnectedSignal;
+
     AdjacencyManager();
     virtual ~AdjacencyManager();
+
   private:
     template<typename T>
     void print(T const& q) {

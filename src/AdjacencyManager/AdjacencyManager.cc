@@ -30,6 +30,8 @@
 using namespace inet; // more OK to use in .cc
 
 Define_Module(AdjacencyManager);
+const simsignal_t AdjacencyManager::newNeighbourConnectedSignal = cComponent::registerSignal("newNeighConnected");
+const simsignal_t AdjacencyManager::oldNeighbourDisconnectedSignal = cComponent::registerSignal("oldNeighDisconnected");
 
 /**
  * routerId (using it as an ID?)
@@ -71,6 +73,7 @@ void AdjacencyManager::initialize(int stage) {
 
 /**
  *  Connect two peers, with configurable policy.
+ *  Effectively, the policy is hardcoded to A for all MNs and to B for the others.
  *  - policy A: connect a new DTPM (effectively disabling 'forwarding' for this node)
  *    - This might have the same Locator
  *    - This probably will have a different DTPM address.
@@ -117,17 +120,19 @@ void AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
 //                    route->setAdminDist(inet::IRoute::RouteAdminDist::dDirectlyConnected); // only IPv4
 //        route->setPrefixLength(longestPrefix);
         irt->addRoute(route);
-        emit(UniSphereControlPlane::newNeighbourConnectedSignal, neighbour);
     }
     else if (!isUniSphere() && !routeAlreadyPresent) {
         // IPv4 case
         // Implement
+        // Only send a signal if you are the node initiating a connection.
         ASSERT(false);
+
     }
+    emit(newNeighbourConnectedSignal, neighbour);
 }
 void AdjacencyManager::disconnectNode(cModule* neighbour) {
     if (isUniSphere()) {
-        emit(UniSphereControlPlane::oldNeighbourDisconnectedSignal, neighbour);
+        emit(oldNeighbourDisconnectedSignal, neighbour);
         // announce Ourselves?? to prevent starvation
     }
     else {
