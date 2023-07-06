@@ -305,7 +305,8 @@ bool UniSphereControlPlane::retract(L3Address dest) {
     return numDeleted > 0;
 }
 bool UniSphereControlPlane::retract(L3Address neighSource, L3Address dest) {
-    for (int i=0; i < irt->getNumRoutes(); i++) {
+    // irt mutates in the loop, we know it's a vector, so we cheat with this information...
+    for (int i=irt->getNumRoutes()-1; i>=0; i--) {
         auto *e = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
         if (neighSource == e->getNextHopAsGeneric()
                 && (dest.isUnspecified() || dest == e->getDestinationAsGeneric())) {
