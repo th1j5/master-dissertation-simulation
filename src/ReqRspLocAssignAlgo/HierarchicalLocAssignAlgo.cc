@@ -290,33 +290,32 @@ void HierarchicalLocAssignAlgo::handleCrashOperation(LifecycleOperation *operati
 }
 
 // need it? server + client
-//NetworkInterface *HierarchicalLocAssignAlgo::chooseInterface(const char *interfaceName)
-//{
-//    IInterfaceTable *ift = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
-//    if (interfaceName == nullptr)
-//        interfaceName = par("newLocInterface");
-//    NetworkInterface *ie = nullptr;
-//
-//    if (strlen(interfaceName) > 0) {
-//        ie = ift->findInterfaceByName(interfaceName);
-//        if (ie == nullptr)
-//            throw cRuntimeError("Interface \"%s\" does not exist", interfaceName);
-//    }
-//    else {
-//        // there should be exactly one non-loopback interface that we want to configure
-//        for (int i = 0; i < ift->getNumInterfaces(); i++) {
-//            NetworkInterface *current = ift->getInterface(i);
-//            if (!current->isLoopback()) {
-//                if (ie)
-//                    throw cRuntimeError("Multiple non-loopback interfaces found, please select explicitly which one you want to configure via DHCP");
-//                ie = current;
-//            }
-//        }
-//        if (!ie)
-//            throw cRuntimeError("No non-loopback interface found to be configured via DHCP");
-//    }
-//    return ie;
-//}
+NetworkInterface *HierarchicalLocAssignAlgo::chooseInterface(const char *interfaceName) {
+    IInterfaceTable *ift = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
+    if (interfaceName == nullptr)
+        interfaceName = par("newLocInterface");
+    NetworkInterface *ie = nullptr;
+
+    if (strlen(interfaceName) > 0) {
+        ie = ift->findInterfaceByName(interfaceName);
+        if (ie == nullptr)
+            throw cRuntimeError("Interface \"%s\" does not exist", interfaceName);
+    }
+    else {
+        // there should be exactly one non-loopback interface that we want to configure
+        for (int i = 0; i < ift->getNumInterfaces(); i++) {
+            NetworkInterface *current = ift->getInterface(i);
+            if (!current->isLoopback()) {
+                if (ie)
+                    throw cRuntimeError("Multiple non-loopback interfaces found, please select explicitly which one you want to configure via DHCP");
+                ie = current;
+            }
+        }
+        if (!ie)
+            throw cRuntimeError("No non-loopback interface found to be configured via DHCP");
+    }
+    return ie;
+}
 //namespace { // In front! Declaration before usage...
 //static bool routeMatches(const Ipv4Route *entry, const Ipv4Address& target, const Ipv4Address& nmask,
 //        const Ipv4Address& gw, int metric, const char *dev)

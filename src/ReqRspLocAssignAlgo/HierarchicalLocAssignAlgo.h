@@ -68,6 +68,7 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
 
     // client & server
     virtual void sendToNeighbour(inet::L3Address neighbour, inet::Ptr<ReqRspLocMessage> payload);
+    inet::NetworkInterface* chooseInterface(const char *interfaceName = nullptr);
 
     // client
     virtual inet::Ptr<ReqRspLocMessage> createLocReqPayload();
