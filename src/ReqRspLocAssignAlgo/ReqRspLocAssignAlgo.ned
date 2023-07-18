@@ -25,6 +25,8 @@ simple HierarchicalLocAssignAlgo {
         string interfaceTableModule;
         bool client;
         bool server;
+        // client
+        string newLocInterface = default(""); // which NIC should be configured (i.e. wlan0, eth1 etc.)
     gates:
         input networkLayerIn;
         output networkLayerOut;
