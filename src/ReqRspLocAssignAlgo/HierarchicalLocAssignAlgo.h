@@ -1,0 +1,93 @@
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see http://www.gnu.org/licenses/.
+// 
+
+#ifndef REQRSPLOCASSIGNALGO_HIERARCHICALLOCASSIGNALGO_H_
+#define REQRSPLOCASSIGNALGO_HIERARCHICALLOCASSIGNALGO_H_
+
+#include <omnetpp.h>
+#include "inet/common/ModuleRefByPar.h"
+#include "inet/common/Protocol.h"
+#include "inet/common/ProtocolGroup.h"
+#include "inet/linklayer/common/InterfaceTag_m.h"
+#include "inet/routing/base/RoutingProtocolBase.h"
+#include "inet/networklayer/contract/IRoutingTable.h"
+
+#include "Locator_m.h"
+#include "ReqRspLocMessage_m.h"
+#include "LocUpdatable/LocUpdatable.h"
+#include "AdjacencyManager/AdjacencyManager.h"
+
+using namespace omnetpp;
+
+class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omnetpp::cListener, public LocUpdatable {
+  public:
+    HierarchicalLocAssignAlgo();
+    virtual ~HierarchicalLocAssignAlgo();
+
+  protected:
+    // server
+    typedef std::map<inet::MacAddress, inet::L3Address> LocLeased;
+    LocLeased leased;
+
+    //client
+
+    // 201 should be available, see 'networklayer/common/IpProtocolId.msg'
+    static const int protocolId = 201;
+    const inet::Protocol *hierLocAssignAlgo;
+
+    // parameters
+    inet::ModuleRefByPar<inet::IRoutingTable> irt;
+    inet::ModuleRefByPar<inet::IInterfaceTable> ift;
+    cGate *peerIn = nullptr;
+    cGate *peerOut = nullptr;
+    bool client = false;
+    bool server = false;
+
+    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    virtual void initialize(int stage) override;
+    virtual void handleMessageWhenUp(cMessage *msg) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override;
+
+    // client & server
+    virtual void sendToNeighbour(inet::L3Address neighbour, inet::Ptr<inet::FieldsChunk> payload);
+    // client
+    virtual inet::Ptr<inet::FieldsChunk> createLocReqPayload();
+    virtual void removeOldLocClient();
+    // server
+    virtual inet::Ptr<ReqRspLocMessage> createLocRspPayload(const inet::Ptr<const ReqRspLocMessage> req);
+    virtual void handleLocReqMessage(inet::Packet *packet);
+    virtual bool isFilteredServerMessage(inet::Packet *packet);
+    //FIXME: change next functions
+    virtual inet::L3Address assignLoc(inet::MacAddress clientID);
+    virtual inet::L3Address* getLocByID(inet::MacAddress clientID);
+
+    // lifecycle
+    virtual void handleStartOperation(inet::LifecycleOperation *operation) override;
+    virtual void handleStopOperation(inet::LifecycleOperation *operation) override;
+    virtual void handleCrashOperation(inet::LifecycleOperation *operation) override;
+
+  private:
+    //server
+    template<typename K, typename V, typename _C, typename Tv, typename = typename std::enable_if<std::is_convertible<Tv, V>::value>::type>
+    inline bool containsValue(const std::map<K,V,_C>& m, const Tv& a) {
+        for (const auto& [key, value] : m) {
+            if (value == a)
+                return true;
+        }
+        return false;
+    }
+};
+
+#endif /* REQRSPLOCASSIGNALGO_HIERARCHICALLOCASSIGNALGO_H_ */
