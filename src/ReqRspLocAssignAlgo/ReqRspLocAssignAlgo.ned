@@ -23,8 +23,8 @@ simple HierarchicalLocAssignAlgo {
         @class(HierarchicalLocAssignAlgo);
         string routingTableModule;
         string interfaceTableModule;
-        bool client;
-        bool server;
+        bool client = default(false);
+        bool server = default(false);
         // client
         string newLocInterface = default(""); // which NIC should be configured (i.e. wlan0, eth1 etc.)
     gates:

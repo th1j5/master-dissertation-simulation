@@ -42,9 +42,6 @@ module ScalableRouter extends Router {
         hierLocAssignAlgo: HierarchicalLocAssignAlgo if exists(ipv4) {
             parameters:
                 @display("p=1000,226");
-                server = true;
-                client = false;
-                // server/responder?
         }
     connections:
         unisphere.networkLayerOut --> tn.in++ if exists(generic);
@@ -73,9 +70,6 @@ module MobileScalableRouter extends ManetRouter {
         hierLocAssignAlgo: HierarchicalLocAssignAlgo if exists(ipv4) {
             parameters:
                 @display("p=1000,226");
-                server = false;
-                client = true;
-                // client/requestor?
         }
     connections:
         unisphere.networkLayerOut --> tn.in++ if exists(generic);
@@ -83,12 +77,16 @@ module MobileScalableRouter extends ManetRouter {
         hierLocAssignAlgo.networkLayerOut --> tn.in++ if exists(ipv4);
         hierLocAssignAlgo.networkLayerIn <-- tn.out++ if exists(ipv4);
 }
+
+// Final class nodes
 module NeighbourNode extends ScalableRouter {
     parameters:
         *.adjacencyMgmt = default(absPath(".adjacencyManager"));
         numWlanInterfaces = default(1);
         **.radio.displayCommunicationRange = default(true);
         *.newLocInterface = "wlan0";
+        // server/responder?
+        hierLocAssignAlgo.server = true;
 }
 module RoutingNode extends ScalableRouter
 {
@@ -106,4 +104,6 @@ module MobileNode extends MobileScalableRouter {
         numWlanInterfaces = default(2);   // newLoc (wlan[0]) and oldLoc (wlan[1])
         *.newLocInterface = "wlan0";
         //*.oldLocInterface = "wlan1";
+        // client/requestor?
+        hierLocAssignAlgo.client = true;
 }
