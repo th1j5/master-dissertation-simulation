@@ -99,8 +99,7 @@ void HierarchicalLocAssignAlgo::handleMessageWhenUp(cMessage *msg) {
         handleLocReqMessage(pkt);
     }
     if (client) {
-        throw cRuntimeError("not yet implemented");
-//        handleLocRspMessage(pkt);
+        handleLocRspMessage(pkt);
     }
 }
 
@@ -152,7 +151,29 @@ Ptr<ReqRspLocMessage> HierarchicalLocAssignAlgo::createLocRspPayload(const Ptr<c
     assignLoc->setSIface(iface);
     return assignLoc;
 }
+// client
+void HierarchicalLocAssignAlgo::handleLocRspMessage(Packet *packet) {
+    // TODO assign etc, see client
+    const auto& msg = packet->peekAtFront<ReqRspLocMessage>();
+    throw cRuntimeError("not yet implemented");
 
+    fixDynamicRoutesClient(msg);
+}
+void HierarchicalLocAssignAlgo::fixDynamicRoutesClient(const Ptr<const ReqRspLocMessage> & piggybackMsg) {
+    // This should be part of the routing protocol part of the ControlPlane
+    // NOT the locator assigning algo
+    // However, this does not exist here, thus this 'hook' fixes this small job
+
+    // Default gateway need to be installed
+    Ipv4Route *route = new Ipv4Route();
+    route->setDestination(Ipv4Address());
+    route->setNetmask(Ipv4Address());
+    route->setNextHop(piggybackMsg->getSIface());
+    int ifaceId = piggybackMsg->getTag<InterfaceInd>()->getInterfaceId();
+    route->setInterface(ift->getInterfaceById(ifaceId));
+    route->setSourceType(Ipv4Route::MANUAL);
+    irt->addRoute(route);
+}
 // server
 void HierarchicalLocAssignAlgo::handleLocReqMessage(Packet *packet) {
     /**
@@ -189,6 +210,27 @@ bool HierarchicalLocAssignAlgo::isFilteredMessageServer(Packet *packet) {
         ASSERT(false);
         return true;
     }
+    return false;
+}
+bool HierarchicalLocAssignAlgo::isFilteredMessageClient(const Ptr<const ReqRspLocMessage> & msg) {
+    if (msg->getOp() != LOCREPLY) {
+        EV_WARN << "Client received a non-LOCREPLY message, dropping." << endl;
+        ASSERT(false);
+        return true;
+    }
+    ASSERT(msg->getSeqNumber() <= numNewNeighConnected);
+    if (msg->getSeqNumber() <= seqRcvd) {
+        EV_WARN << "Message sequence number is not recent enough, dropping." << endl;
+        ASSERT(false);
+        return true;
+    }
+    if (msg->getCID() != getHostID(host)) {
+        EV_WARN << "Loc update not intended for this client, dropping." << endl;
+        ASSERT(false);
+        return true;
+    }
+
+    seqRcvd = msg->getSeqNumber();
     return false;
 }
 L3Address HierarchicalLocAssignAlgo::assignLoc(L3Address clientID) {
