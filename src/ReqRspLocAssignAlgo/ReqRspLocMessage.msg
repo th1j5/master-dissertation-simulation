@@ -35,9 +35,15 @@ class ReqRspLocMessage extends MultiplexerPacket
     multiplexerDestination = "adj_mgmt";
     ReqRspLocOpcode op;
     int seqNumber;
-    inet::L3Address sID; // server ID (MAC)
-    inet::L3Address cID; // client hardware address (MAC)
-    inet::L3Address assignedLoc;
-    inet::L3Address sLoc; // server Loc (= gateway)
-    inet::Ipv4Address subnetMask; //needed because we use IPv4
+    inet::L3Address   sID;         // server ID (MAC)
+    inet::L3Address   cID;         // client hardware address (MAC)
+    inet::L3Address   assignedLoc;
+
+    // needed for routes & dataPlane purposeses, not clear how much is actually implemented in INET
+    // i.e., maybe we could drop this info and always use a 32 length netmask
+    inet::Ipv4Address subnetMask;  // needed because we use IPv4
+
+    // PiggyBack info - only used for route assignement, NOT for locAssignment
+    //inet::L3Address   sLoc;        // server Loc (= gateway)
+    inet::Ipv4Address sIface;      // server Iface address (= gateway)
 }

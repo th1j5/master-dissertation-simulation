@@ -27,6 +27,8 @@ simple HierarchicalLocAssignAlgo {
         bool server = default(false);
         // client
         string newLocInterface = default(""); // which NIC should be configured (i.e. wlan0, eth1 etc.)
+        // server
+        int maxNumClients = default(-1); // maximum number of clients (IPs) allowed to be leased
     gates:
         input networkLayerIn;
         output networkLayerOut;

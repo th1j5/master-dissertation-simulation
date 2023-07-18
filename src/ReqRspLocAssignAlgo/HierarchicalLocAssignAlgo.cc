@@ -15,6 +15,10 @@
 
 #include "HierarchicalLocAssignAlgo.h"
 
+#include "inet/networklayer/ipv4/Ipv4Route.h"
+#include "inet/networklayer/ipv4/Ipv4InterfaceData.h"
+#include "inet/networklayer/common/HopLimitTag_m.h"
+#include "inet/networklayer/common/L3AddressTag_m.h"
 #include "inet/common/IProtocolRegistrationListener.h"
 
 using namespace inet; // more OK to use in .cc
@@ -86,7 +90,7 @@ void HierarchicalLocAssignAlgo::handleMessageWhenUp(cMessage *msg) {
     Packet *pkt = check_and_cast<Packet *>(msg);
     auto protocol = pkt->getTag<PacketProtocolTag>()->getProtocol();
     if (protocol != hierLocAssignAlgo)
-        throw cRuntimeError("U-SphereControlPlane: received unknown packet '%s (%s)' from the network layer.", msg->getName(), msg->getClassName());
+        throw cRuntimeError("received unknown packet '%s (%s)' from the network layer.", msg->getName(), msg->getClassName());
     EV_WARN << "Received hierLocAssign packet from network: " << msg->getName() << " (" << msg->getClassName() << ")" << endl;
 
     ASSERT(dynamicPtrCast<const ReqRspLocMessage>(pkt->peekAtFront()));
@@ -95,15 +99,16 @@ void HierarchicalLocAssignAlgo::handleMessageWhenUp(cMessage *msg) {
         handleLocReqMessage(pkt);
     }
     if (client) {
-        handleLocRspMessage(pkt);
+        throw cRuntimeError("not yet implemented");
+//        handleLocRspMessage(pkt);
     }
 }
 
-void HierarchicalLocAssignAlgo::receiveSignal(cComponent *source, simsignal_t signalID, cObject *neigh, cObject *details) {
+void HierarchicalLocAssignAlgo::receiveSignal(cComponent *source, simsignal_t signalID, cObject *neighbour, cObject *details) {
     Enter_Method("%s", cComponent::getSignalName(signalID));
     if (client && signalID == AdjacencyManager::newNeighbourConnectedSignal) {
         // send Loc request
-        cModule* neigh = check_and_cast<cModule*>(neigh);
+        cModule* neigh = check_and_cast<cModule*>(neighbour);
         auto payload = createLocReqPayload();
         sendToNeighbour(getHostID(neigh), payload);
         numNewNeighConnected++; // also serves as sequence number of send messages
@@ -123,7 +128,7 @@ void HierarchicalLocAssignAlgo::receiveSignal(cComponent *source, simsignal_t si
         throw cRuntimeError("Unexpected signal: %s", getSignalName(signalID));
 }
 
-Ptr<FieldsChunk> HierarchicalLocAssignAlgo::createLocReqPayload() {
+Ptr<ReqRspLocMessage> HierarchicalLocAssignAlgo::createLocReqPayload() {
     const auto& getLoc = makeShared<ReqRspLocMessage>();
     uint16_t length = 100; // packet size without the options field
     getLoc->setOp(LOCREQUEST);
@@ -142,31 +147,35 @@ Ptr<ReqRspLocMessage> HierarchicalLocAssignAlgo::createLocRspPayload(const Ptr<c
     assignLoc->setSID(getHostID(host)); // server ID
     assignLoc->setCID(req->getCID()); // client ID
     assignLoc->setChunkLength(B(length));
-    assignLoc->setSLoc(locator);
+
     assignLoc->setSubnetMask(subnetMask);
+    assignLoc->setSIface(iface);
     return assignLoc;
 }
 
+// server
 void HierarchicalLocAssignAlgo::handleLocReqMessage(Packet *packet) {
     /**
      *  NOT Enrollment (cfr Ouroboros)
      *  Handles incoming request Loc messages
      */
-    if (isFilteredServerMessage(packet))
+    if (isFilteredMessageServer(packet))
         return;
 
     const auto& msg = packet->peekAtFront<ReqRspLocMessage>();
+
     // insert neighbouring node into the networkgraph, by assigning it a Loc + linking to it
     L3Address assignedLoc = assignLoc(msg->getCID());
     auto payload = createLocRspPayload(msg); // sendAssignLocPacket()
     payload->setAssignedLoc(assignedLoc);
+
     EV_INFO << "Sending assignLoc." << endl;
-    sendToNeighbour(neighbour, payload); // FIXME
+    // FIXME, neighbour doesn't have an IP-addr
+    sendToNeighbour(msg->getCID(), payload);
 
     EV_DEBUG << "Deleting " << packet << "." << endl; // happens by caller
-    numReceived++;
 }
-bool HierarchicalLocAssignAlgo::isFilteredServerMessage(Packet *packet) {
+bool HierarchicalLocAssignAlgo::isFilteredMessageServer(Packet *packet) {
     const auto& msg = packet->peekAtFront<ReqRspLocMessage>();
     if (msg->getOp() != LOCREQUEST) {
         EV_WARN << "Server received a non-LOCREQUEST message, dropping." << endl;
@@ -175,14 +184,14 @@ bool HierarchicalLocAssignAlgo::isFilteredServerMessage(Packet *packet) {
     }
     // check that the packet arrived on the interface we are supposed to serve
     int inputInterfaceId = packet->getTag<InterfaceInd>()->getInterfaceId();
-    if (inputInterfaceId != ie->getInterfaceId()) {
+    if (inputInterfaceId != chooseInterface()->getInterfaceId()) {
         EV_WARN << "AdjMessage arrived on a different interface, dropping\n";
         ASSERT(false);
         return true;
     }
     return false;
 }
-L3Address HierarchicalLocAssignAlgo::assignLoc(MacAddress clientID) {
+L3Address HierarchicalLocAssignAlgo::assignLoc(L3Address clientID) {
     auto * loc = getLocByID(clientID);
     if (loc)
         return *loc;
@@ -198,29 +207,29 @@ L3Address HierarchicalLocAssignAlgo::assignLoc(MacAddress clientID) {
     }
     throw cRuntimeError("No new Loc available");
 }
-L3Address* HierarchicalLocAssignAlgo::getLocByID(MacAddress clientID) {
+L3Address* HierarchicalLocAssignAlgo::getLocByID(L3Address clientID) {
     auto it = leased.find(clientID);
     if (it == leased.end()) {
-        EV_DETAIL << "Lease not found for MAC " << clientID << "." << endl;
+        EV_DETAIL << "Lease not found for ID/MAC " << clientID << "." << endl;
         // lease does not exist
         return nullptr;
     }
     else {
-        EV_DETAIL << "Found lease for MAC " << clientID << "." << endl;
+        EV_DETAIL << "Found lease for ID/MAC " << clientID << "." << endl;
         return &(it->second);
     }
 }
 
 void HierarchicalLocAssignAlgo::removeOldLocClient() {
-    auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
-    if(!ipv4DataOld->getIPAddress().isUnspecified()) { //assume IP & netmask always configured together
-        EV_WARN << "Deleting old Loc" << endl;
-        ipv4DataOld->setIPAddress(Ipv4Address());
-        ipv4DataOld->setNetmask(Ipv4Address());
-        emit(oldLocRemovedSignal, numLocUpdates);
-    }
+//    auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
+//    if(!ipv4DataOld->getIPAddress().isUnspecified()) { //assume IP & netmask always configured together
+//        EV_WARN << "Deleting old Loc" << endl;
+//        ipv4DataOld->setIPAddress(Ipv4Address());
+//        ipv4DataOld->setNetmask(Ipv4Address());
+//        emit(oldLocRemovedSignal, numLocUpdates);
+//    }
 }
-void HierarchicalLocAssignAlgo::sendToNeighbour(L3Address neighbour, Ptr<FieldsChunk> payload) {
+void HierarchicalLocAssignAlgo::sendToNeighbour(L3Address neighbour, Ptr<ReqRspLocMessage> payload) {
     short ttl = 1;
     std::ostringstream str;
     int seqNum = payload->getSeqNumber();
@@ -239,14 +248,16 @@ void HierarchicalLocAssignAlgo::sendToNeighbour(L3Address neighbour, Ptr<FieldsC
 //    EV_INFO << "Sending packet " << msg << endl;
 //    msg->addTagIfAbsent<InterfaceReq>()->setInterfaceId(ie->getInterfaceId());
     send(pkt, peerOut);
-    seqSend++;
 }
 void HierarchicalLocAssignAlgo::handleStartOperation(LifecycleOperation *operation) {
-    ie = chooseInterface();
-    macAddress = ie->getMacAddress();
+    if (!(server || client))
+        return;
+
+    NetworkInterface* ie = chooseInterface();
+//    macAddress = ie->getMacAddress();
     // client
     simtime_t start = simTime(); // std::max(startTime
-    ieOld = chooseInterface(par("oldLocInterface"));
+//    ieOld = chooseInterface(par("oldLocInterface"));
     // server
     maxNumOfClients = par("maxNumClients");
     long numReservedLocs = 2; // hardcode reserved addresses (net + server)
@@ -254,7 +265,7 @@ void HierarchicalLocAssignAlgo::handleStartOperation(LifecycleOperation *operati
     auto ipv4data = ie->getProtocolData<Ipv4InterfaceData>();
     subnetMask = ipv4data->getNetmask();
     uint32_t networkStartAddress = ipv4data->getIPAddress().getInt() & ipv4data->getNetmask().getInt();
-    locator = L3Address(ipv4data->getIPAddress());
+    iface = ipv4data->getIPAddress();
     ipAddressStart = Ipv4Address(networkStartAddress + numReservedLocs);
     if (maxNumOfClients == -1) {
         maxNumOfClients = (~subnetMask.getInt()) - numReservedLocs; //also broadcast
@@ -263,17 +274,17 @@ void HierarchicalLocAssignAlgo::handleStartOperation(LifecycleOperation *operati
         throw cRuntimeError("Not enough IP addresses in subnet for %d clients", maxNumOfClients);
 }
 void HierarchicalLocAssignAlgo::handleStopOperation(LifecycleOperation *operation) {
-    ie = nullptr;
+//    ie = nullptr;
     // client
-    ieOld = nullptr;
+//    ieOld = nullptr;
     // server
     leased.clear();
 }
 
 void HierarchicalLocAssignAlgo::handleCrashOperation(LifecycleOperation *operation) {
-    ie = nullptr;
+//    ie = nullptr;
     // client
-    ieOld = nullptr;
+//    ieOld = nullptr;
     // server
     leased.clear();
 }

@@ -20,6 +20,7 @@
 
 #include "inet/networklayer/nexthop/NextHopRoute.h"
 #include "inet/networklayer/nexthop/NextHopRoutingTable.h"
+#include "inet/networklayer/ipv4/Ipv4Route.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/mobility/contract/IMobility.h"
 #include "inet/physicallayer/wireless/common/contract/packetlevel/IRadio.h"
@@ -131,6 +132,14 @@ bool AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
     else if (!isUniSphere()) {
         // IPv4 case
         // Implement
+
+        // preload neigh in RT. Will probably become gateway
+        // TODO: is this needed or not? not for DHCP
+//        Ipv4Route* route = new Ipv4Route();
+//        route->setDestination(_dest);
+//        route->setInterface(iface);
+//        irt->addRoute(route);
+
         // Only send a signal if you are the node initiating a connection.
         ASSERT(false);
 

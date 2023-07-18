@@ -38,10 +38,16 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
 
   protected:
     // server
-    typedef std::map<inet::MacAddress, inet::L3Address> LocLeased;
+    // ID -> Loc
+    typedef std::map<inet::L3Address, inet::L3Address> LocLeased;
     LocLeased leased;
+    int maxNumOfClients = 0;
+    inet::Ipv4Address iface;
+    inet::Ipv4Address subnetMask;
+    inet::Ipv4Address ipAddressStart;
 
     //client
+    int seqRcvd; // latest received message
 
     // 201 should be available, see 'networklayer/common/IpProtocolId.msg'
     static const int protocolId = 201;
@@ -61,17 +67,18 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
     virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override;
 
     // client & server
-    virtual void sendToNeighbour(inet::L3Address neighbour, inet::Ptr<inet::FieldsChunk> payload);
+    virtual void sendToNeighbour(inet::L3Address neighbour, inet::Ptr<ReqRspLocMessage> payload);
+
     // client
-    virtual inet::Ptr<inet::FieldsChunk> createLocReqPayload();
+    virtual inet::Ptr<ReqRspLocMessage> createLocReqPayload();
     virtual void removeOldLocClient();
     // server
     virtual inet::Ptr<ReqRspLocMessage> createLocRspPayload(const inet::Ptr<const ReqRspLocMessage> req);
     virtual void handleLocReqMessage(inet::Packet *packet);
-    virtual bool isFilteredServerMessage(inet::Packet *packet);
+    virtual bool isFilteredMessageServer(inet::Packet *packet);
     //FIXME: change next functions
-    virtual inet::L3Address assignLoc(inet::MacAddress clientID);
-    virtual inet::L3Address* getLocByID(inet::MacAddress clientID);
+    virtual inet::L3Address assignLoc(inet::L3Address clientID);
+    virtual inet::L3Address* getLocByID(inet::L3Address clientID);
 
     // lifecycle
     virtual void handleStartOperation(inet::LifecycleOperation *operation) override;
