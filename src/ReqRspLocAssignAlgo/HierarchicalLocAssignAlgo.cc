@@ -17,9 +17,12 @@
 
 #include "inet/networklayer/ipv4/Ipv4Route.h"
 #include "inet/networklayer/ipv4/Ipv4InterfaceData.h"
+#include "inet/networklayer/ipv4/Ipv4RoutingTable.h"
 #include "inet/networklayer/common/HopLimitTag_m.h"
 #include "inet/networklayer/common/L3AddressTag_m.h"
 #include "inet/common/IProtocolRegistrationListener.h"
+
+#include "util.h"
 
 using namespace inet; // more OK to use in .cc
 Define_Module(HierarchicalLocAssignAlgo);
@@ -80,6 +83,13 @@ void HierarchicalLocAssignAlgo::initialize(int stage) {
         // subscribe
         host->subscribe(AdjacencyManager::newNeighbourConnectedSignal, this);
         host->subscribe(AdjacencyManager::oldNeighbourDisconnectedSignal, this);
+
+        // fix routerID to be usable
+        auto * ipv4RT = check_and_cast<Ipv4RoutingTable*>(irt.get());
+        Ipv4Address myID = Ipv4Address(uint32_t(host->getId()));
+        ipv4RT->setRouterId(myID);
+        ASSERT(!irt->getRouterIdAsGeneric().isUnspecified());
+
         // other signals? like: interfaceDeletedSignal, l2AssociatedSignal?
     }
 }
