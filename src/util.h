@@ -10,8 +10,8 @@
 
 #include <omnetpp.h>
 #include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
 
+#include "UdpBasicConnectionApp/NodeIDToLocatorResolver.h"
 #include "UniSphere/UniSphereRoute.h"
 
 static inet::L3Address getHostID(cModule* host) {
@@ -25,15 +25,49 @@ static inet::L3Address getHostID(cModule* host) {
     ASSERT(!peerID.isUnspecified());
     return peerID;
 }
+static bool isUniSphere() {
+    static enum {
+        UNKNOWN,
+        IPV4,
+        UNISPHERE
+    } simulationType = { UNKNOWN };
+
+    // enable/disable check for each run or not...
+    if (true || simulationType == UNKNOWN) {
+        cObject *mod = cSimulation::getActiveSimulation()->findObject("unisphere");
+        if (mod)
+            simulationType = UNISPHERE;
+        else
+            simulationType = IPV4;
+    }
+    switch (simulationType) {
+        case IPV4:
+            return false;
+            break;
+        case UNISPHERE:
+            return true;
+            break;
+        default:
+            throw cRuntimeError("SimulationType unknown or unsupported");
+            break;
+    }
+}
 
 namespace {
 static bool isNeighbourRoute(const inet::IRoute *entry) {
-    if (entry->getMetric() == 0) { // neighbour
-        ASSERT(entry->getDestinationAsGeneric() == entry->getNextHopAsGeneric());
-        return true;
+    if (isUniSphere()) {
+        if (entry->getMetric() == 0) { // neighbour
+            ASSERT(entry->getDestinationAsGeneric() == entry->getNextHopAsGeneric());
+            return true;
+        }
+        else
+            return false;
     }
-    else
-        return false;
+    else {
+        // only selects 'special' neigh routes (inserted by us, not the Ipv4NetworkConfigurator - probably wireless)
+        return entry->getMetric() == 0;
+                //&& entry->getNextHopAsGeneric() == Ipv4;
+    }
 }
 static bool isUnitializedNeighbour(const UniSphereRoute *entry) {
     // Is this an entry inserted by the adjManager or not?
@@ -52,8 +86,10 @@ static std::vector<cModule*> getConnectedNeigh(inet::ModuleRefByPar<inet::IRouti
     std::vector<cModule*> nodes;
     for (int i=0; i<irt->getNumRoutes(); i++) {
         inet::IRoute *e = irt->getRoute(i);
-        if(isNeighbourRoute(e))
-            nodes.push_back(inet::L3AddressResolver().findHostWithAddress(e->getDestinationAsGeneric()));
+        if(isNeighbourRoute(e)) {
+            nodes.push_back(NodeIDToLocatorResolver().findHostWithAddress(e->getDestinationAsGeneric()));
+            ASSERT(nodes.back());
+        }
     }
     return nodes;
 }
@@ -96,34 +132,6 @@ static int getNetworkSize() {
     }
     EV_DEBUG << "Network estimate: " << networkSize << endl;
     return networkSize;
-}
-
-static bool isUniSphere() {
-    static enum {
-        UNKNOWN,
-        IPV4,
-        UNISPHERE
-    } simulationType = { UNKNOWN };
-
-    // enable/disable check for each run or not...
-    if (true || simulationType == UNKNOWN) {
-        cObject *mod = cSimulation::getActiveSimulation()->findObject("unisphere");
-        if (mod)
-            simulationType = UNISPHERE;
-        else
-            simulationType = IPV4;
-    }
-    switch (simulationType) {
-        case IPV4:
-            return false;
-            break;
-        case UNISPHERE:
-            return true;
-            break;
-        default:
-            throw cRuntimeError("SimulationType unknown or unsupported");
-            break;
-    }
 }
 
 // https://stackoverflow.com/a/51217509

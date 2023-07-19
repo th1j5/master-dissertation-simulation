@@ -7,7 +7,7 @@
 
 #include "UniSphereRoute.h"
 
-#include "../util.h"
+#include "util.h"
 
 using namespace inet; // more OK to use in .cc
 
