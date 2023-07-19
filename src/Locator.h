@@ -62,7 +62,7 @@ class Locator: public cObject {
     ~Locator();
     Locator& operator=(const Locator& o);
     bool isUnspecified() const;
-    inet::L3Address getFinalDestination();
+    inet::L3Address getFinalDestination() const;
     RoutingPath getPath();
 };
 

@@ -79,7 +79,7 @@ bool Locator::isUnspecified() const {
             break;
     }
 }
-inet::L3Address Locator::getFinalDestination() {
+inet::L3Address Locator::getFinalDestination() const {
     switch (locatorType) {
         case Tag::UNISPHERE:
             return uniSphereLocator.ID;
