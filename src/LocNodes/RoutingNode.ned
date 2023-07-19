@@ -103,7 +103,7 @@ module MobileNode extends MobileScalableRouter {
         app[*].oldLocInterface = "wlan1"; // pick up unreachability of old Loc
         numWlanInterfaces = default(2);   // newLoc (wlan[0]) and oldLoc (wlan[1])
         *.newLocInterface = "wlan0";
-        //*.oldLocInterface = "wlan1";
+        *.oldLocInterface = "wlan1";
         // client/requestor?
         hierLocAssignAlgo.client = true;
 }

@@ -28,6 +28,7 @@ using namespace omnetpp;
 class LocUpdatable {
   public:
     static const simsignal_t newLocAssignedSignal;
+    static const simsignal_t oldLocRemovedSignal;
     LocUpdatable();
     virtual ~LocUpdatable();
 

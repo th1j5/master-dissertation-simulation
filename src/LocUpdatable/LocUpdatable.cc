@@ -18,6 +18,7 @@
 //using namespace inet; // more OK to use in .cc
 
 const simsignal_t LocUpdatable::newLocAssignedSignal = cComponent::registerSignal("newLocatorAssigned");
+const simsignal_t LocUpdatable::oldLocRemovedSignal  = cComponent::registerSignal("oldLocatorUnreachable");
 
 LocUpdatable::LocUpdatable() {
     // TODO Auto-generated constructor stub
