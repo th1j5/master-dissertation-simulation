@@ -135,14 +135,17 @@ bool AdjacencyManager::connectNode(cModule* neighbour, NetworkInterface * iface)
 
         // preload neigh in RT. Will probably become gateway
         // TODO: is this needed or not? not for DHCP
-//        Ipv4Route* route = new Ipv4Route();
-//        route->setDestination(_dest);
-//        route->setInterface(iface);
-//        irt->addRoute(route);
+        // YES: will prevent constant (re)connecting
+        Ipv4Route* route = new Ipv4Route();
+        route->setDestination(peerID);
+        route->setNetmask(Ipv4Address::ALLONES_ADDRESS);
+//        route->setNextHop(peerID);
+        // Broadcast, DHCP like, because no IP exists yet
+        route->setGateway(Ipv4Address::ALLONES_ADDRESS);
+        route->setInterface(iface);
+        irt->addRoute(route);
 
         // Only send a signal if you are the node initiating a connection.
-        ASSERT(false);
-
     }
     emit(newNeighbourConnectedSignal, neighbour);
     return true;
