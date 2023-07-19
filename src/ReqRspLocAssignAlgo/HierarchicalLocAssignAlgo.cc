@@ -297,23 +297,26 @@ void HierarchicalLocAssignAlgo::handleStartOperation(LifecycleOperation *operati
 
     NetworkInterface* ie = chooseInterface();
 //    macAddress = ie->getMacAddress();
+
     // client
     simtime_t start = simTime(); // std::max(startTime
 //    ieOld = chooseInterface(par("oldLocInterface"));
-    // server
-    maxNumOfClients = par("maxNumClients");
-    long numReservedLocs = 2; // hardcode reserved addresses (net + server)
 
-    auto ipv4data = ie->getProtocolData<Ipv4InterfaceData>();
-    subnetMask = ipv4data->getNetmask();
-    uint32_t networkStartAddress = ipv4data->getIPAddress().getInt() & ipv4data->getNetmask().getInt();
-    iface = ipv4data->getIPAddress();
-    ipAddressStart = Ipv4Address(networkStartAddress + numReservedLocs);
-    if (maxNumOfClients == -1) {
-        maxNumOfClients = (~subnetMask.getInt()) - numReservedLocs; //also broadcast
+    if (server) {
+        maxNumOfClients = par("maxNumClients");
+        long numReservedLocs = 2; // hardcode reserved addresses (net + server)
+
+        auto ipv4data = ie->getProtocolData<Ipv4InterfaceData>();
+        subnetMask = ipv4data->getNetmask();
+        uint32_t networkStartAddress = ipv4data->getIPAddress().getInt() & ipv4data->getNetmask().getInt();
+        iface = ipv4data->getIPAddress();
+        ipAddressStart = Ipv4Address(networkStartAddress + numReservedLocs);
+        if (maxNumOfClients == -1) {
+            maxNumOfClients = (~subnetMask.getInt()) - numReservedLocs; //also broadcast
+        }
+        if (!Ipv4Address::maskedAddrAreEqual(ipv4data->getIPAddress(), Ipv4Address(ipAddressStart.getInt() + maxNumOfClients - 1), subnetMask))
+            throw cRuntimeError("Not enough IP addresses in subnet for %d clients", maxNumOfClients);
     }
-    if (!Ipv4Address::maskedAddrAreEqual(ipv4data->getIPAddress(), Ipv4Address(ipAddressStart.getInt() + maxNumOfClients - 1), subnetMask))
-        throw cRuntimeError("Not enough IP addresses in subnet for %d clients", maxNumOfClients);
 }
 void HierarchicalLocAssignAlgo::handleStopOperation(LifecycleOperation *operation) {
 //    ie = nullptr;
