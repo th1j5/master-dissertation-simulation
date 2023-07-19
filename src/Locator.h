@@ -8,10 +8,12 @@
 #ifndef LOCATOR_H_
 #define LOCATOR_H_
 
+#include <omnetpp.h>
 #include "inet/networklayer/common/L3Tools.h"
 
 #include "UniSphere/RoutingPath_m.h"
-#include "util.h"
+
+using namespace omnetpp;
 
 struct UniSphereLocator {
     inet::L3Address ID = inet::ModulePathAddress(); // any type different from ::NONE
@@ -55,86 +57,14 @@ class Locator: public cObject {
         locatorType(Tag::UNISPHERE), uniSphereLocator(loc) {}
     Locator(inet::L3Address loc):
         locatorType(Tag::IPV4), ipv4Locator(loc) {}
-    Locator() {
-        if (isUniSphere()) {
-            locatorType = Tag::UNISPHERE;
-            new(&uniSphereLocator) UniSphereLocator();
-        }
-        else {
-            locatorType = Tag::IPV4;
-            new(&ipv4Locator) inet::Ipv4Address();
-        }
-    }
-    Locator(const Locator& o):
-        locatorType(o.locatorType)
-    {
-        switch (locatorType) {
-            case Tag::UNISPHERE:
-                new(&uniSphereLocator) UniSphereLocator();
-                uniSphereLocator = o.uniSphereLocator;
-                break;
-            case Tag::IPV4:
-                new(&ipv4Locator) inet::L3Address();
-                ipv4Locator = o.ipv4Locator;
-                break;
-        }
-    }
-    ~Locator() {
-        switch (locatorType) {
-            case Tag::UNISPHERE:
-                uniSphereLocator.~UniSphereLocator();
-                break;
-            case Tag::IPV4:
-                ipv4Locator.~L3Address();
-                break;
-        }
-    }
-    Locator& operator=(const Locator& o) {
-        if (locatorType != o.locatorType) {
-            throw cRuntimeError("not supported");
-        }
-        switch (o.locatorType) {
-            case Tag::UNISPHERE:
-                uniSphereLocator = o.uniSphereLocator;
-                break;
-            case Tag::IPV4:
-                ipv4Locator = o.ipv4Locator;
-                break;
-        }
-        return *this;
-    }
-    bool isUnspecified() const {
-        switch (locatorType) {
-            case Tag::UNISPHERE:
-                return uniSphereLocator.isUnspecified();
-                break;
-            case Tag::IPV4:
-                return ipv4Locator.isUnspecified();
-                break;
-        }
-    }
-    inet::L3Address getFinalDestination() {
-        switch (locatorType) {
-            case Tag::UNISPHERE:
-                return uniSphereLocator.ID;
-                break;
-            case Tag::IPV4:
-                return ipv4Locator;
-                break;
-        }
-    }
-    RoutingPath getPath() {
-        switch (locatorType) {
-            case Tag::UNISPHERE:
-                return uniSphereLocator.path;
-                break;
-            case Tag::IPV4:
-                throw cRuntimeError("Not supported");
-                break;
-        }
-    }
+    Locator();
+    Locator(const Locator& o);
+    ~Locator();
+    Locator& operator=(const Locator& o);
+    bool isUnspecified() const;
+    inet::L3Address getFinalDestination();
+    RoutingPath getPath();
 };
-Register_Class(Locator);
 
 /*
 union Locator {
