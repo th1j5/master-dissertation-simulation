@@ -34,6 +34,7 @@ class NodeIDToLocatorResolver: public inet::L3AddressResolver {
 #pragma clang diagnostic pop
     virtual bool tryResolve(const char *str, Locator& result, int addrType = DEFAULT_ADDR_TYPE_1);
     virtual bool tryResolve(const char *str, inet::L3Address& result, int addrType = DEFAULT_ADDR_TYPE_1) override { throw cRuntimeError("Unjust usage..."); }
+    virtual cModule *findHostWithAddress(const inet::L3Address& addr) override;
 
     NodeIDToLocatorResolver();
     virtual ~NodeIDToLocatorResolver();

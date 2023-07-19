@@ -15,8 +15,10 @@
 
 #include "NodeIDToLocatorResolver.h"
 
-#include "../UniSphere/UniSphereControlPlane.h"
-#include "../util.h"
+#include "UniSphere/UniSphereControlPlane.h"
+#include "util.h"
+
+#include "inet/networklayer/ipv4/IIpv4RoutingTable.h"
 
 using namespace inet;
 
@@ -168,6 +170,23 @@ void NodeIDToLocatorResolver::addressOf(cModule *host, Locator& result, int addr
 }
 void NodeIDToLocatorResolver::addressOf(cModule *host, const char *ifname, Locator& result, int addrType) {
     throw cRuntimeError("Not implemented");
+}
+
+cModule* NodeIDToLocatorResolver::findHostWithAddress(const L3Address& addr) {
+    if (isUniSphere())
+        return L3AddressResolver::findHostWithAddress(addr);
+    else {
+        if (addr.isUnspecified() || addr.isMulticast())
+            return nullptr;
+
+        auto networkNodes = collectNetworkNodes();
+        for (cModule *mod : networkNodes) {
+            IIpv4RoutingTable *rtable = getIpv4RoutingTableOf(mod);
+            if(rtable->getRouterIdAsGeneric() == addr)
+                return mod;
+        }
+        return nullptr;
+    }
 }
 
 NodeIDToLocatorResolver::NodeIDToLocatorResolver() {

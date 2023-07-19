@@ -22,6 +22,7 @@
 #include "inet/queueing/common/LabelsTag_m.h" // Alternative: inet/common/FlowTag.msg
 
 #include "NodeIDToLocatorResolver.h"
+#include "util.h"
 #include "UniSphere/LocatorTag_m.h"
 // #include "inet/InterfaceTableAccess.h"
 //#include "AdjacencyManager/AdjacencyManagerClient.h"
