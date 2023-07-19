@@ -119,6 +119,7 @@ void HierarchicalLocAssignAlgo::receiveSignal(cComponent *source, simsignal_t si
         // send Loc request
         cModule* neigh = check_and_cast<cModule*>(neighbour);
         auto payload = createLocReqPayload();
+        payload->setSID(getHostID(neigh));
         sendToNeighbour(getHostID(neigh), payload);
         numNewNeighConnected++; // also serves as sequence number of send messages
     }
@@ -166,6 +167,10 @@ void HierarchicalLocAssignAlgo::handleLocRspMessage(Packet *packet) {
     // TODO assign etc, see client
     const auto& msg = packet->peekAtFront<ReqRspLocMessage>();
     throw cRuntimeError("not yet implemented");
+    if (isFilteredMessageClient(msg))
+        return;
+
+    EV_DEBUG << "Deleting " << packet << "." << endl; // happens by caller
 
     fixDynamicRoutesClient(msg);
 }
@@ -220,12 +225,15 @@ bool HierarchicalLocAssignAlgo::isFilteredMessageServer(Packet *packet) {
         ASSERT(false);
         return true;
     }
+    if (msg->getSID() != getHostID(host)) {
+        EV_WARN << "LocAssignMessage intended for different server, dropping\n";
+        return true;
+    }
     return false;
 }
 bool HierarchicalLocAssignAlgo::isFilteredMessageClient(const Ptr<const ReqRspLocMessage> & msg) {
     if (msg->getOp() != LOCREPLY) {
         EV_WARN << "Client received a non-LOCREPLY message, dropping." << endl;
-        ASSERT(false);
         return true;
     }
     ASSERT(msg->getSeqNumber() <= numNewNeighConnected);
@@ -292,7 +300,10 @@ void HierarchicalLocAssignAlgo::sendToNeighbour(L3Address neighbour, Ptr<ReqRspL
     pkt->addTagIfAbsent<PacketProtocolTag>()->setProtocol(hierLocAssignAlgo);
     pkt->addTagIfAbsent<DispatchProtocolInd>()->setProtocol(hierLocAssignAlgo);
     pkt->addTagIfAbsent<DispatchProtocolReq>()->setProtocol(&Protocol::ipv4);
-    pkt->addTagIfAbsent<L3AddressReq>()->setDestAddress(neighbour);
+    // neighbour is the neigh ID, which will not be recognized, thus we need to bcast, on correct iface
+    pkt->addTagIfAbsent<L3AddressReq>()->setDestAddress(Ipv4Address::ALLONES_ADDRESS);
+    int ifaceID = irt->findBestMatchingRoute(neighbour)->getInterface()->getInterfaceId();
+    pkt->addTagIfAbsent<InterfaceReq>()->setInterfaceId(ifaceID);
     pkt->addTagIfAbsent<HopLimitReq>()->setHopLimit(ttl);
     //sendToUdp(packet, clientPort, Ipv4Address::ALLONES_ADDRESS, serverPort);
     EV_INFO << "Sending ReqRspMessage." << endl;

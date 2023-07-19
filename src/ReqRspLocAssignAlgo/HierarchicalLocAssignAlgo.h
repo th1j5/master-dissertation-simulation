@@ -47,7 +47,7 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
     inet::Ipv4Address ipAddressStart;
 
     //client
-    int seqRcvd; // latest received message
+    int seqRcvd = -1; // latest received message
 
     // 201 should be available, see 'networklayer/common/IpProtocolId.msg'
     static const int protocolId = 201;
@@ -55,7 +55,6 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
 
     // parameters
     inet::ModuleRefByPar<inet::IRoutingTable> irt;
-    inet::ModuleRefByPar<inet::IInterfaceTable> ift;
     cGate *peerIn = nullptr;
     cGate *peerOut = nullptr;
     bool client = false;
