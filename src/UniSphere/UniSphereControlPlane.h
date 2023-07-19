@@ -17,10 +17,8 @@
 #define UNISPHERE_UNISPHERECONTROLPLANE_H_
 
 #include <omnetpp.h>
-#include "inet/common/ModuleRefByPar.h"
 #include "inet/common/Protocol.h"
 #include "inet/common/ProtocolGroup.h"
-#include "inet/linklayer/common/InterfaceTag_m.h"
 #include "inet/routing/base/RoutingProtocolBase.h"
 #include "inet/networklayer/contract/IRoutingTable.h"
 #include "inet/networklayer/nexthop/NextHopRoute.h"
@@ -71,7 +69,6 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     //irtActive;
     inet::ModuleRefByPar<inet::IRoutingTable> irt;
 //    opp_component_ptr<inet::IRoutingTable> irtOld;
-    inet::ModuleRefByPar<inet::IInterfaceTable> ift;
 
     cGate *peerIn = nullptr;
     cGate *peerOut = nullptr;
@@ -100,11 +97,6 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     virtual bool selectLocalAddress();
 
     virtual void networkSizeEstimateChanged(int size);
-    inet::NetworkInterface *getSourceInterfaceFrom(inet::Packet *packet) {
-        const auto& interfaceInd = packet->findTag<inet::InterfaceInd>();
-        return interfaceInd != nullptr ? ift->getInterfaceById(interfaceInd->getInterfaceId()) : nullptr;
-    }
-
 
     // lifecycle
     virtual void handleStartOperation(inet::LifecycleOperation *operation) override;

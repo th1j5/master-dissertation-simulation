@@ -478,7 +478,6 @@ bool UniSphereControlPlane::selectLocalAddress() {
             temp.pop();
         }
     }
-    // TODO signal Loc change?
     // TODO!! removeOldLoc
     numLocUpdates++;
     emit(newLocAssignedSignal, numLocUpdates, new Locator(locator));

@@ -17,6 +17,11 @@
 #define LOCUPDATABLE_LOCUPDATABLE_H_
 
 #include <omnetpp.h>
+#include "inet/common/ModuleRefByPar.h"
+#include "inet/common/packet/Packet.h"
+#include "inet/linklayer/common/InterfaceTag_m.h"
+#include "inet/networklayer/common/NetworkInterface.h"
+#include "inet/networklayer/contract/IInterfaceTable.h"
 
 using namespace omnetpp;
 
@@ -34,6 +39,12 @@ class LocUpdatable {
 
     // parameters
     cModule *host = nullptr;
+    inet::ModuleRefByPar<inet::IInterfaceTable> ift;
+
+    inet::NetworkInterface *getSourceInterfaceFrom(inet::Packet *packet) {
+        const auto& interfaceInd = packet->findTag<inet::InterfaceInd>();
+        return interfaceInd != nullptr ? ift->getInterfaceById(interfaceInd->getInterfaceId()) : nullptr;
+    }
 
   public:
     // FIXME: encoding ints mostly works, but not necessarily (https://stackoverflow.com/questions/10749419/encode-multiple-ints-into-a-double)
