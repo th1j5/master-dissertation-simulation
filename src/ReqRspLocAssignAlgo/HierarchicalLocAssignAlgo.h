@@ -23,6 +23,7 @@
 #include "inet/linklayer/common/InterfaceTag_m.h"
 #include "inet/routing/base/RoutingProtocolBase.h"
 #include "inet/networklayer/contract/IRoutingTable.h"
+#include "inet/networklayer/ipv4/IIpv4RoutingTable.h"
 
 #include "Locator_m.h"
 #include "ReqRspLocMessage_m.h"
@@ -48,13 +49,18 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
 
     //client
     int seqRcvd = -1; // latest received message
+    struct {
+        inet::L3Address loc{};
+        inet::Ipv4Address netmask{};
+        inet::L3Address neigh{}; // neighbours of the old Locator (at the moment just 1)
+    } oldLocData;
 
     // 201 should be available, see 'networklayer/common/IpProtocolId.msg'
     static const int protocolId = 201;
     const inet::Protocol *hierLocAssignAlgo;
 
     // parameters
-    inet::ModuleRefByPar<inet::IRoutingTable> irt;
+    inet::ModuleRefByPar<inet::IIpv4RoutingTable> irt;
     cGate *peerIn = nullptr;
     cGate *peerOut = nullptr;
     bool client = false;
@@ -73,6 +79,7 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
     virtual inet::Ptr<ReqRspLocMessage> createLocReqPayload();
     virtual void handleLocRspMessage(inet::Packet *packet);
     virtual bool isFilteredMessageClient(const inet::Ptr<const ReqRspLocMessage> & msg);
+    virtual bool updateLocator(Locator const& loc, const inet::Ipv4Address & subnetMask);
     virtual void removeOldLocClient();
     virtual void fixDynamicRoutesClient(const inet::Ptr<const ReqRspLocMessage> & piggybackMsg);
 

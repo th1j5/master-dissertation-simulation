@@ -15,6 +15,7 @@
 
 #include "HierarchicalLocAssignAlgo.h"
 
+#include "inet/linklayer/common/InterfaceTag_m.h"
 #include "inet/networklayer/ipv4/Ipv4Route.h"
 #include "inet/networklayer/ipv4/Ipv4InterfaceData.h"
 #include "inet/networklayer/ipv4/Ipv4RoutingTable.h"
@@ -45,6 +46,24 @@ HierarchicalLocAssignAlgo::~HierarchicalLocAssignAlgo() {
     leased.clear();
     if (host != nullptr && host->isSubscribed(AdjacencyManager::newNeighbourConnectedSignal, this))
         host->unsubscribe(AdjacencyManager::newNeighbourConnectedSignal, this);
+}
+namespace {
+static bool routeMatches(const Ipv4Route *entry, const Ipv4Address& target, const Ipv4Address& nmask,
+        const Ipv4Address& gw, int metric, const char *dev)
+{
+    if (!target.equals(entry->getDestination()))
+        return false;
+    if (!nmask.equals(entry->getNetmask()))
+        return false;
+    if (!gw.equals(entry->getGateway()))
+        return false;
+    if (metric && metric != entry->getMetric())
+        return false;
+    if (strcmp(dev, entry->getInterfaceName()))
+        return false;
+
+    return true;
+}
 }
 
 void HierarchicalLocAssignAlgo::initialize(int stage) {
@@ -166,18 +185,84 @@ Ptr<ReqRspLocMessage> HierarchicalLocAssignAlgo::createLocRspPayload(const Ptr<c
 void HierarchicalLocAssignAlgo::handleLocRspMessage(Packet *packet) {
     // TODO assign etc, see client
     const auto& msg = packet->peekAtFront<ReqRspLocMessage>();
-    throw cRuntimeError("not yet implemented");
     if (isFilteredMessageClient(msg))
         return;
+
+    // assign Loc
+    if (updateLocator(msg->getAssignedLoc(), msg->getSubnetMask())) {
+        // In network mechanisms
+        // TODO: enable
+//        if (strcasecmp(par("locChangingStrategy"), "TTR") == 0)
+//            sendNeighLocUpdate(L3Address(ip), oldLocData.loc, oldLocData.neigh);
+//        else if (strcasecmp(par("locChangingStrategy"), "ID") == 0)
+//            /* sendNeighLocUpdate, with ID's */;
+//        else if (strcasecmp(par("locChangingStrategy"), "end2end") != 0)
+//            throw cRuntimeError("Unrecognized locator changing strategy");
+    }
 
     EV_DEBUG << "Deleting " << packet << "." << endl; // happens by caller
 
     fixDynamicRoutesClient(msg);
 }
+bool HierarchicalLocAssignAlgo::updateLocator(Locator const& loc, const Ipv4Address & subnetMask) {
+    //
+    const Ipv4Address& ip = loc.getFinalDestination().toIpv4();
+    //const Ipv4Address & subnetMask = ;
+    auto ipv4Data = chooseInterface()->getProtocolDataForUpdate<Ipv4InterfaceData>();
+
+    // Decision to Update Locator to new locator
+    if (ipv4Data->getIPAddress() == ip)
+        return false;
+
+    /* assignNewLoc */
+    //empty to prevent conflicts in GlobalArp
+    removeOldLocClient(); // oldOld loc
+
+    //- numLocUpdates++; // tactically placed such that all future calls to removeOldLoc will have the same corrID as the corrID which is send by newLocAssignedSignal
+
+    // Save oldLoc
+    oldLocData.loc = ipv4Data->getIPAddress();
+    oldLocData.netmask = ipv4Data->getNetmask();
+    // FIXME: needed for TTR. oldLocData.neigh = getGateway(ie);
+    // Assign newLoc
+    ASSERT(!ip.isUnspecified());
+    ASSERT(ip != oldLocData.loc.toIpv4());
+    ipv4Data->setIPAddress(ip);
+    ipv4Data->setNetmask(subnetMask);
+    //- emit();
+    // Info
+    std::string banner = "Got new Loc " + ip.str();
+    host->bubble(banner.c_str());
+    EV_INFO << host->getFullName() << " got the following Loc assigned: "
+            << ip << "/" << subnetMask << "." << endl;
+    // Restore oldLoc
+    auto ipv4DataOld = chooseInterface(par("oldLocInterface"))->getProtocolDataForUpdate<Ipv4InterfaceData>();
+    if (!oldLocData.loc.isUnspecified()) {
+        ipv4DataOld->setIPAddress(oldLocData.loc.toIpv4());
+        ipv4DataOld->setNetmask(oldLocData.netmask);
+    }
+
+    /* final */
+    numLocUpdates++;
+    emit(newLocAssignedSignal, numLocUpdates, new Locator(ip));
+    return true;
+}
 void HierarchicalLocAssignAlgo::fixDynamicRoutesClient(const Ptr<const ReqRspLocMessage> & piggybackMsg) {
     // This should be part of the routing protocol part of the ControlPlane
     // NOT the locator assigning algo
     // However, this does not exist here, thus this 'hook' fixes this small job
+
+    // TODO: fix routing table
+    Ipv4Route *iroute = nullptr;
+    for (int i = 0; i < irt->getNumRoutes(); i++) {
+        Ipv4Route *e = irt->getRoute(i);
+        if (routeMatches(e, Ipv4Address(), Ipv4Address(), piggybackMsg->getSIface(), 0, chooseInterface()->getInterfaceName())) {
+            iroute = e;
+            break;
+        }
+    }
+    if (iroute != nullptr)
+        throw cRuntimeError("Unknown conditions, please check.");
 
     // Default gateway need to be installed
     Ipv4Route *route = new Ipv4Route();
@@ -281,13 +366,13 @@ L3Address* HierarchicalLocAssignAlgo::getLocByID(L3Address clientID) {
 }
 
 void HierarchicalLocAssignAlgo::removeOldLocClient() {
-//    auto ipv4DataOld = ieOld->getProtocolDataForUpdate<Ipv4InterfaceData>();
-//    if(!ipv4DataOld->getIPAddress().isUnspecified()) { //assume IP & netmask always configured together
-//        EV_WARN << "Deleting old Loc" << endl;
-//        ipv4DataOld->setIPAddress(Ipv4Address());
-//        ipv4DataOld->setNetmask(Ipv4Address());
-//        emit(oldLocRemovedSignal, numLocUpdates);
-//    }
+    auto ipv4DataOld = chooseInterface(par("oldLocInterface"))->getProtocolDataForUpdate<Ipv4InterfaceData>();
+    if(!ipv4DataOld->getIPAddress().isUnspecified()) { //assume IP & netmask always configured together
+        EV_WARN << "Deleting old Loc" << endl;
+        ipv4DataOld->setIPAddress(Ipv4Address());
+        ipv4DataOld->setNetmask(Ipv4Address());
+        emit(oldLocRemovedSignal, numLocUpdates);
+    }
 }
 void HierarchicalLocAssignAlgo::sendToNeighbour(L3Address neighbour, Ptr<ReqRspLocMessage> payload) {
     short ttl = 1;

@@ -18,7 +18,9 @@ import inet.common.packet.chunk.Chunk;
 import inet.networklayer.common.L3Address;
 import inet.networklayer.contract.ipv4.Ipv4Address;
 import inet.linklayer.common.MacAddress;
+
 import MultiplexerPacket;
+import Locator;
 
 //
 // Adjacency Managment Message
@@ -37,7 +39,7 @@ class ReqRspLocMessage extends MultiplexerPacket
     int seqNumber;
     inet::L3Address   sID;         // server ID (MAC)
     inet::L3Address   cID;         // client hardware address (MAC)
-    inet::L3Address   assignedLoc;
+    Locator           assignedLoc;
 
     // needed for routes & dataPlane purposeses, not clear how much is actually implemented in INET
     // i.e., maybe we could drop this info and always use a 32 length netmask
