@@ -10,6 +10,7 @@
 
 #include <omnetpp.h>
 #include "inet/networklayer/common/L3Address.h"
+#include "inet/networklayer/ipv4/Ipv4Route.h"
 
 #include "UdpBasicConnectionApp/NodeIDToLocatorResolver.h"
 #include "UniSphere/UniSphereRoute.h"
@@ -64,8 +65,11 @@ static bool isNeighbourRoute(const inet::IRoute *entry) {
             return false;
     }
     else {
+        auto *e = check_and_cast<const inet::Ipv4Route*>(entry);
         // only selects 'special' neigh routes (inserted by us, not the Ipv4NetworkConfigurator - probably wireless)
-        return entry->getMetric() == 0;
+        return e->getMetric() == 0
+                && !e->getDestinationAsGeneric().isUnspecified()
+                && e->getPrefixLength() == 32;
                 //&& entry->getNextHopAsGeneric() == Ipv4;
     }
 }
