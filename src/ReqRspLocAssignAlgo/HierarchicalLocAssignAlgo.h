@@ -41,7 +41,7 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
     // server
     // ID -> Loc
     typedef std::map<inet::L3Address, inet::L3Address> LocLeased;
-    LocLeased leased;
+    LocLeased leased; // client -> used to map neigh->assignedLoc
     int maxNumOfClients = 0;
     inet::Ipv4Address iface;
     inet::Ipv4Address subnetMask;

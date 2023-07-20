@@ -209,9 +209,9 @@ void AdjacencyManager::changeTopologyPolicyMN() {
     EV_WARN << "Connected to: "; print(connectedNodes); EV_WARN << endl;
 
     if (!nodesInRangeSorted.empty()) {
-        auto *neigh = nodesInRangeSorted.back();
+        auto *closestNeigh = nodesInRangeSorted.back();
         // connect closest neigh
-        if (!contains(connectedNodes, neigh)) {
+        if (!contains(connectedNodes, closestNeigh)) {
             // CHANGE TOPOLOGY
             // DISCONNECT OLD (furthest) - policy because we only have limited (here: 2) antennas to connect
             auto cmp = [this](cModule* const& left, cModule* const& right) { return this->getDistance(left) > this->getDistance(right); };
@@ -220,10 +220,11 @@ void AdjacencyManager::changeTopologyPolicyMN() {
             for (const auto& oldNeigh: drop_last(connectedNodes))
                 disconnectNodeTwoSided(oldNeigh);
             // CONNECT NEW
-            connectNodeTwoSided(neigh);
+            connectNodeTwoSided(closestNeigh);
         }
     }
     // disconnect (when out-of-reach)
+    // TODO: except when it is the last neighbour?
     for (auto n: getConnectedNeigh(irt)) { // refresh connectedNeigh info
         if (!contains(nodesInRangeSorted, n)) {
             disconnectNodeTwoSided(n);

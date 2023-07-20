@@ -130,13 +130,14 @@ void HierarchicalLocAssignAlgo::handleMessageWhenUp(cMessage *msg) {
     if (client) {
         handleLocRspMessage(pkt);
     }
+    delete pkt;
 }
 
 void HierarchicalLocAssignAlgo::receiveSignal(cComponent *source, simsignal_t signalID, cObject *neighbour, cObject *details) {
     Enter_Method("%s", cComponent::getSignalName(signalID));
+    cModule* neigh = check_and_cast<cModule*>(neighbour);
     if (client && signalID == AdjacencyManager::newNeighbourConnectedSignal) {
         // send Loc request
-        cModule* neigh = check_and_cast<cModule*>(neighbour);
         auto payload = createLocReqPayload();
         payload->setSID(getHostID(neigh));
         sendToNeighbour(getHostID(neigh), payload);
