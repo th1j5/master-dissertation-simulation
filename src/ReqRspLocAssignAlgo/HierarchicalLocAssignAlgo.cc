@@ -144,7 +144,18 @@ void HierarchicalLocAssignAlgo::receiveSignal(cComponent *source, simsignal_t si
         numNewNeighConnected++; // also serves as sequence number of send messages
     }
     if (client && signalID == AdjacencyManager::oldNeighbourDisconnectedSignal) {
-        // TODO?!!
+        // cfr. fixDynamicRoutesClient - not part of locAssigning...
+        auto &locToRemove = leased.at(getHostID(neigh));
+        auto *ieLocToRemove = ift->findInterfaceByAddress(locToRemove);
+        ASSERT(ieLocToRemove);
+        // remove Loc
+        removeLocClient(ieLocToRemove);
+        // if we removed the active Loc
+        if (chooseInterface(par("newLocInterface")) == ieLocToRemove) {
+            //TODO: throw cRuntimeError("not yet implemented");
+            // make old Loc active again
+            // should also remove default gateway if it's the last...
+        }
     }
     if (server && signalID == AdjacencyManager::newNeighbourConnectedSignal) {
         // Do nothing, client has to initiate Loc Request
@@ -213,13 +224,16 @@ bool HierarchicalLocAssignAlgo::updateLocator(const inet::Ptr<const ReqRspLocMes
     //const Ipv4Address & subnetMask = ;
     auto ipv4Data = chooseInterface()->getProtocolDataForUpdate<Ipv4InterfaceData>();
 
+    // remember which neighbouring server gave us our Locator
+    leased.insert({msg->getSID(), ip});
     // Decision to Update Locator to new locator
     if (ipv4Data->getIPAddress() == ip)
         return false;
 
     /* assignNewLoc */
     //empty to prevent conflicts in GlobalArp
-    removeOldLocClient(); // oldOld loc
+    auto ipv4DataOlda = chooseInterface(par("oldLocInterface"))->getProtocolDataForUpdate<Ipv4InterfaceData>();
+    ASSERT2(ipv4DataOlda->getIPAddress().isUnspecified(), "Loc should have been removed beforehand by removing a neigh through AdjMgmt");
 
     //- numLocUpdates++; // tactically placed such that all future calls to removeOldLoc will have the same corrID as the corrID which is send by newLocAssignedSignal
 

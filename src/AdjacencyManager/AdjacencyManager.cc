@@ -173,17 +173,18 @@ void AdjacencyManager::disconnectNode(cModule* neighbour) {
         // announce Ourselves?? to prevent starvation
     }
     else {
-        //TODO
-//        L3Address peerID = getHostID(neighbour);
-//        IRoute *e = irt->findBestMatchingRoute(peerID);
-//        while (e != nullptr
-//                    && e->getDestinationAsGeneric() == peerID
-//                    && e->getNextHopAsGeneric() == peerID
-//                    && e->getMetric() == 0)
-//        {
-//            irt->deleteRoute(e);
-//            e = irt->findBestMatchingRoute(peerID);
-//        }
+        emit(oldNeighbourDisconnectedSignal, neighbour);
+        // clean up neigh in RT (let's call it the neigh table, only in the RT out of necessity)
+        L3Address peerID = getHostID(neighbour);
+        IRoute *e = irt->findBestMatchingRoute(peerID);
+        while (e != nullptr
+                    && e->getDestinationAsGeneric() == peerID
+                    && e->getNextHopAsGeneric() == Ipv4Address::ALLONES_ADDRESS
+                    && e->getMetric() == 0)
+        {
+            irt->deleteRoute(e);
+            e = irt->findBestMatchingRoute(peerID);
+        }
     }
 }
 
