@@ -190,7 +190,7 @@ void HierarchicalLocAssignAlgo::handleLocRspMessage(Packet *packet) {
         return;
 
     // assign Loc
-    if (updateLocator(msg->getAssignedLoc(), msg->getSubnetMask())) {
+    if (updateLocator(msg)) {
         // In network mechanisms
         // TODO: enable
 //        if (strcasecmp(par("locChangingStrategy"), "TTR") == 0)
@@ -203,10 +203,12 @@ void HierarchicalLocAssignAlgo::handleLocRspMessage(Packet *packet) {
 
     EV_DEBUG << "Deleting " << packet << "." << endl; // happens by caller
 
-    fixDynamicRoutesClient(msg);
+    fixDynamicRoutesClient(packet);
 }
-bool HierarchicalLocAssignAlgo::updateLocator(Locator const& loc, const Ipv4Address & subnetMask) {
+bool HierarchicalLocAssignAlgo::updateLocator(const inet::Ptr<const ReqRspLocMessage> & msg) {
     //
+    Locator const& loc = msg->getAssignedLoc();
+    const Ipv4Address & subnetMask = msg->getSubnetMask();
     const Ipv4Address& ip = loc.getFinalDestination().toIpv4();
     //const Ipv4Address & subnetMask = ;
     auto ipv4Data = chooseInterface()->getProtocolDataForUpdate<Ipv4InterfaceData>();
@@ -248,10 +250,11 @@ bool HierarchicalLocAssignAlgo::updateLocator(Locator const& loc, const Ipv4Addr
     emit(newLocAssignedSignal, numLocUpdates, new Locator(ip));
     return true;
 }
-void HierarchicalLocAssignAlgo::fixDynamicRoutesClient(const Ptr<const ReqRspLocMessage> & piggybackMsg) {
+void HierarchicalLocAssignAlgo::fixDynamicRoutesClient(Packet* piggybackPkt) {
     // This should be part of the routing protocol part of the ControlPlane
     // NOT the locator assigning algo
     // However, this does not exist here, thus this 'hook' fixes this small job
+    const auto& piggybackMsg = piggybackPkt->peekAtFront<ReqRspLocMessage>();
 
     // TODO: fix routing table
     Ipv4Route *iroute = nullptr;
@@ -270,8 +273,7 @@ void HierarchicalLocAssignAlgo::fixDynamicRoutesClient(const Ptr<const ReqRspLoc
     route->setDestination(Ipv4Address());
     route->setNetmask(Ipv4Address());
     route->setNextHop(piggybackMsg->getSIface());
-    int ifaceId = piggybackMsg->getTag<InterfaceInd>()->getInterfaceId();
-    route->setInterface(ift->getInterfaceById(ifaceId));
+    route->setInterface(getSourceInterfaceFrom(piggybackPkt));
     route->setSourceType(Ipv4Route::MANUAL);
     irt->addRoute(route);
 }

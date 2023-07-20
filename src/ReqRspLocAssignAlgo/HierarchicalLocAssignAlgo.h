@@ -79,9 +79,9 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
     virtual inet::Ptr<ReqRspLocMessage> createLocReqPayload();
     virtual void handleLocRspMessage(inet::Packet *packet);
     virtual bool isFilteredMessageClient(const inet::Ptr<const ReqRspLocMessage> & msg);
-    virtual bool updateLocator(Locator const& loc, const inet::Ipv4Address & subnetMask);
+    virtual bool updateLocator(const inet::Ptr<const ReqRspLocMessage> & msg);
     virtual void removeOldLocClient();
-    virtual void fixDynamicRoutesClient(const inet::Ptr<const ReqRspLocMessage> & piggybackMsg);
+    virtual void fixDynamicRoutesClient(inet::Packet *piggybackMsg);
 
     // server
     virtual inet::Ptr<ReqRspLocMessage> createLocRspPayload(const inet::Ptr<const ReqRspLocMessage> req);
