@@ -173,20 +173,22 @@ void NodeIDToLocatorResolver::addressOf(cModule *host, const char *ifname, Locat
 }
 
 cModule* NodeIDToLocatorResolver::findHostWithAddress(const L3Address& addr) {
-    if (isUniSphere())
-        return L3AddressResolver::findHostWithAddress(addr);
-    else {
-        if (addr.isUnspecified() || addr.isMulticast())
-            return nullptr;
+    // first try normal resolver (for IP case where the interfaces are addressed (p.-) )
+    cModule* mod = L3AddressResolver::findHostWithAddress(addr);
+    if (mod)
+        return mod;
 
-        auto networkNodes = collectNetworkNodes();
-        for (cModule *mod : networkNodes) {
-            IIpv4RoutingTable *rtable = getIpv4RoutingTableOf(mod);
-            if(rtable->getRouterIdAsGeneric() == addr)
-                return mod;
-        }
+    // now try the ID->mod resolver
+    if (addr.isUnspecified() || addr.isMulticast())
         return nullptr;
+
+    auto networkNodes = collectNetworkNodes();
+    for (cModule *mod : networkNodes) {
+        IIpv4RoutingTable *rtable = getIpv4RoutingTableOf(mod);
+        if(rtable->getRouterIdAsGeneric() == addr)
+            return mod;
     }
+    return nullptr;
 }
 
 NodeIDToLocatorResolver::NodeIDToLocatorResolver() {
