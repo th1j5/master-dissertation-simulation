@@ -303,7 +303,6 @@ bool HierarchicalLocAssignAlgo::isFilteredMessageServer(Packet *packet) {
     const auto& msg = packet->peekAtFront<ReqRspLocMessage>();
     if (msg->getOp() != LOCREQUEST) {
         EV_WARN << "Server received a non-LOCREQUEST message, dropping." << endl;
-        ASSERT(false);
         return true;
     }
     // check that the packet arrived on the interface we are supposed to serve
@@ -327,7 +326,7 @@ bool HierarchicalLocAssignAlgo::isFilteredMessageClient(const Ptr<const ReqRspLo
     ASSERT(msg->getSeqNumber() <= numNewNeighConnected);
     if (msg->getSeqNumber() <= seqRcvd) {
         EV_WARN << "Message sequence number is not recent enough, dropping." << endl;
-        ASSERT(false);
+        // happens also because both antennas receive the same message (p.-)
         return true;
     }
     if (msg->getCID() != getHostID(host)) {
@@ -369,12 +368,15 @@ L3Address* HierarchicalLocAssignAlgo::getLocByID(L3Address clientID) {
 }
 
 void HierarchicalLocAssignAlgo::removeOldLocClient() {
-    auto ipv4DataOld = chooseInterface(par("oldLocInterface"))->getProtocolDataForUpdate<Ipv4InterfaceData>();
+    removeLocClient(chooseInterface(par("oldLocInterface")));
+}
+void HierarchicalLocAssignAlgo::removeLocClient(NetworkInterface* ie) {
+    auto ipv4DataOld = ie->getProtocolDataForUpdate<Ipv4InterfaceData>();
     if(!ipv4DataOld->getIPAddress().isUnspecified()) { //assume IP & netmask always configured together
-        EV_WARN << "Deleting old Loc" << endl;
+        EV_WARN << "Deleting a Loc" << endl;
         ipv4DataOld->setIPAddress(Ipv4Address());
         ipv4DataOld->setNetmask(Ipv4Address());
-        emit(oldLocRemovedSignal, numLocUpdates);
+//        emit(oldLocRemovedSignal, numLocUpdates);
     }
 }
 void HierarchicalLocAssignAlgo::sendToNeighbour(L3Address neighbour, Ptr<ReqRspLocMessage> payload) {
