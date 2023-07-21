@@ -153,6 +153,7 @@ void HierarchicalLocAssignAlgo::receiveSignal(cComponent *source, simsignal_t si
         // if we removed the active Loc
         if (chooseInterface(par("newLocInterface")) == ieLocToRemove) {
             //TODO: throw cRuntimeError("not yet implemented");
+            irt->deleteRoute(irt->getDefaultRoute());
             // make old Loc active again
             // should also remove default gateway if it's the last...
         }
@@ -270,19 +271,13 @@ void HierarchicalLocAssignAlgo::fixDynamicRoutesClient(Packet* piggybackPkt) {
     // However, this does not exist here, thus this 'hook' fixes this small job
     const auto& piggybackMsg = piggybackPkt->peekAtFront<ReqRspLocMessage>();
 
-    // TODO: fix routing table
-    Ipv4Route *iroute = nullptr;
-    for (int i = 0; i < irt->getNumRoutes(); i++) {
-        Ipv4Route *e = irt->getRoute(i);
-        if (routeMatches(e, Ipv4Address(), Ipv4Address(), piggybackMsg->getSIface(), 0, chooseInterface()->getInterfaceName())) {
-            iroute = e;
-            break;
-        }
+    // KLUDGE when changing an interface, also the subnet routes are automatically added by INET
+    // they are however not reset properly when the interface Loc is erased, but become a default route
+    while(irt->getDefaultRoute()) {
+        irt->deleteRoute(irt->getDefaultRoute());
     }
-    if (iroute != nullptr)
-        throw cRuntimeError("Unknown conditions, please check.");
 
-    // Default gateway need to be installed
+    // Default gateway need to be installed, automatically replacing previous default
     Ipv4Route *route = new Ipv4Route();
     route->setDestination(Ipv4Address());
     route->setNetmask(Ipv4Address());
@@ -392,6 +387,8 @@ void HierarchicalLocAssignAlgo::removeLocClient(NetworkInterface* ie) {
         ipv4DataOld->setNetmask(Ipv4Address());
 //        emit(oldLocRemovedSignal, numLocUpdates);
     }
+    //TODO: remove
+
 }
 void HierarchicalLocAssignAlgo::sendToNeighbour(L3Address neighbour, Ptr<ReqRspLocMessage> payload) {
     short ttl = 1;
