@@ -4,12 +4,11 @@
  *  Created on: Mar 31, 2023
  *      Author: thijs
  */
-#ifdef false
 #include "ResultFilters.h"
 
 #include "inet/common/packet/Packet.h"
 #include "LocatorUpdatePacket_m.h"
-#include "AdjacencyManager/AdjacencyManagerClient.h"
+#include "LocUpdatable/LocUpdatable.h"
 
 using namespace inet;
 
@@ -38,7 +37,7 @@ void LocUpdatesFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, doub
 }
 void LocUpdatesFilter::receiveSignal(cComponent *source, simsignal_t signalID, intval_t numLocUpdates, cObject *details) {
     // intercept, check if AdjMgmt, then continue up the hierarchy
-    if (auto adjmgmt = dynamic_cast<AdjacencyManagerClient *>(source)) {
+    if (auto adjmgmt = dynamic_cast<LocUpdatable *>(source)) {
         // fire(this, ?, adjmgmt->getCorrID(numLocUpdates), details);
         cResultFilter::receiveSignal(source, signalID, adjmgmt->getCorrID(numLocUpdates), details);
     }
@@ -70,4 +69,3 @@ void UDPDataFilter::init(Context *ctx) {
 UDPDataFilter::~UDPDataFilter() {
     delete packetFilter;
 }
-#endif
