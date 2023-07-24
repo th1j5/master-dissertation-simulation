@@ -54,6 +54,101 @@ void ReroutedFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObjec
     }
 }
 
+Register_ResultFilter("lossTime", LossTimeFilter);
+void LossTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
+    if (auto packet = dynamic_cast<Packet *>(object)) {
+        if (auto multiplexPacket = dynamicPtrCast<const MultiplexerPacket>(packet->peekAtFront())) {
+            int rerouted = multiplexPacket->getRerouted();
+            int seqnum = multiplexPacket->getSequenceNumber();
+            intval_t currentDestLoc = (intval_t) multiplexPacket->getLocUpdateCorrelationID();
+
+            // check invariants
+            ASSERT2(last_seqnum_old < seqnum, "A packet older (or equally old) than the oldest remembered packet has arrived.");
+//            ASSERT(oldLocator+1 == newLocator); // a jump was taken
+            if (oldLocator < currentDestLoc)
+                ASSERT2(last_seqnum_old < seqnum, "A newer locator has an older sequence number?!");
+            if (newLocator < currentDestLoc)
+                ASSERT2(last_seqnum_new < seqnum, "A newer locator has an older sequence number?!");
+            // start of simulation
+            if (currentDestLoc == -1)
+                return; // skip first packet
+            if (oldLocator == -1) {
+                ASSERT2(rerouted == 0, "the first packet to a new locator is already rerouted?!");
+                oldLocator = currentDestLoc-1; ASSERT(oldLocator != -1);
+                newLocator = currentDestLoc;
+                last_seqnum_new = seqnum-1; // update follows
+            }
+            if (oldLocator <= currentDestLoc && currentDestLoc <= newLocator+1)
+                EV_WARN << "A jump in locators detected. Probably due to a locUpdate which wasn't received?" << endl;
+
+            // If a loss time is calculated, fire
+            if (newLocator < currentDestLoc) {
+                ASSERT2(rerouted == 0, "the first packet to a new locator is already rerouted?!");
+                int lostPackets;
+                if (first_seqnum_rerouted_old == -1)
+                    lostPackets = first_seqnum_new - last_seqnum_old;
+                else
+                    lostPackets = first_seqnum_rerouted_old - last_seqnum_old;
+                // skip first bogus measurement
+                if (last_seqnum_old != -1)
+                    fire(this, t, (intval_t) lostPackets, details); //TODO FIXME!
+                else
+                    fire(this, t, (intval_t) lostPackets, details); //TODO: remove
+                oldLocator = newLocator;
+                newLocator = currentDestLoc;
+                last_seqnum_old = last_seqnum_new;
+                last_seqnum_new = seqnum;
+                first_seqnum_new = seqnum;
+                first_seqnum_rerouted_old = first_seqnum_rerouted_new;
+                first_seqnum_rerouted_new = -1;
+                last_seqnum_rerouted_old = last_seqnum_rerouted_new;
+                last_seqnum_rerouted_new = -1;
+                return;
+            }
+
+            // calculate lossTime (old & new)
+            if (currentDestLoc == oldLocator) {
+                if (last_seqnum_old + 1 == seqnum) {
+                    last_seqnum_old++;
+                    return;
+                }
+                ASSERT2(rerouted > 0, "Not rerouted, but there is still a gap between packets??");
+                if (first_seqnum_rerouted_old == -1) {
+                    /*first rerouted pkt*/
+                    first_seqnum_rerouted_old = seqnum;
+                    last_seqnum_rerouted_old = seqnum;
+                }
+                if (last_seqnum_rerouted_old + 1 == seqnum) {
+                    last_seqnum_rerouted_old++;
+                    return;
+                }
+            }
+            if (currentDestLoc == newLocator) {
+                if (last_seqnum_new + 1 == seqnum) {
+                    last_seqnum_new++;
+                    return;
+                }
+                if (rerouted == 0) { // TODO: how do we take this into account in statistics?
+                    last_seqnum_new = seqnum;
+                    EV_WARN << "Not rerouted, but there is still a gap between packets??" << endl;
+                    return;
+                }
+                if (first_seqnum_rerouted_new == -1) {
+                    /*first rerouted pkt*/
+                    first_seqnum_rerouted_new = seqnum;
+                    last_seqnum_rerouted_new = seqnum;
+                }
+                if (last_seqnum_rerouted_new + 1 == seqnum) {
+                    last_seqnum_rerouted_new++;
+                    return;
+                }
+            }
+
+            throw cRuntimeError("unhandled case for calculating loss Time");
+        }
+    }
+}
+
 Register_ResultFilter("udpData", UDPDataFilter);
 void UDPDataFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
     if (auto packet = dynamic_cast<Packet *>(object)) {

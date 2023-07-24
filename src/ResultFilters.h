@@ -34,6 +34,24 @@ class ReroutedFilter: public cObjectResultFilter {
 #pragma clang diagnostic pop
 };
 
+class LossTimeFilter: public cObjectResultFilter {
+  protected:
+    int last_seqnum_old = -1;
+    int last_seqnum_new = -1;
+    int first_seqnum_new = -1;
+    int first_seqnum_rerouted_old = -1;
+    int first_seqnum_rerouted_new = -1;
+    int last_seqnum_rerouted_old = -1;
+    int last_seqnum_rerouted_new = -1;
+    intval_t oldLocator = -1;
+    intval_t newLocator = 0;
+  public:
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
+    virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
+#pragma clang diagnostic pop
+};
+
 class UDPDataFilter: public cObjectResultFilter {
   protected:
     inet::PacketFilter *packetFilter;
