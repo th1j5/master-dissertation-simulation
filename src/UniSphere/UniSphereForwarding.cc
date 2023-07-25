@@ -100,15 +100,18 @@ void UniSphereForwarding::routePacket(Packet *datagram, const NetworkInterface *
                 // This should mean that this packets comes from this node && this node is a landmark
                 EV_WARN << "NextHop in RoutingPath is local address" << endl;
             }
-            re = routingTable->findBestMatchingRoute(path.top()); //FIXME: check correctness
-            // if it is the nexthop, pop it from the path
-            if (re != nullptr && re->getNextHopAsGeneric() == path.top()) {
-                const auto& newHeader = removeNetworkProtocolHeader<UniSphereForwardingHeader>(datagram);
-                path.pop();
-                newHeader->setPath(path);
-                insertNetworkProtocolHeader(datagram, Protocol::nextHopForwarding, newHeader);
-                header = newHeader;
+            if (path.size() > 0) {
+                re = routingTable->findBestMatchingRoute(path.top()); //FIXME: check correctness
+                // if it is the nexthop, pop it from the path
+                if (re != nullptr && re->getNextHopAsGeneric() == path.top()) {
+                    const auto& newHeader = removeNetworkProtocolHeader<UniSphereForwardingHeader>(datagram);
+                    path.pop();
+                    newHeader->setPath(path);
+                    insertNetworkProtocolHeader(datagram, Protocol::nextHopForwarding, newHeader);
+                    header = newHeader;
+                }
             }
+            // else: strange case: the node is a landmark && the pkt is send by this node && this node is receiver too?
         }
         if (re == nullptr) {
             // last
