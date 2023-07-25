@@ -18,7 +18,8 @@ package prototype.simulations;
 import prototype.DelayLink;
 import prototype.LocNodes.*;
 
-network Wifi_4G_country1 extends basic_network {
+network Wifi_4G_country1 extends basic_network
+{
     parameters:
         @display("bgb=4000,4000;bgg=100,1,grey95");
         int numUsers;
@@ -48,7 +49,7 @@ network Wifi_4G_country1 extends basic_network {
             @display("p=264.6154,121.53847");
         }
         mobileTower[2]: NeighbourNode {
-            @display("p=196.15385,356.15387,,300;r=200");
+            @display("p=196.15385,356.15387,,300");
         }
         IXP: RoutingNode {
             @display("p=356.9231,328.46155");
