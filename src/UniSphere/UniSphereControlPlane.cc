@@ -49,6 +49,8 @@ UniSphereControlPlane::~UniSphereControlPlane() {
 void UniSphereControlPlane::initialize(int stage) {
     RoutingProtocolBase::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
+        ASSERT(strcmp(par("locChangingStrategy"), "end2end") == 0);
+
         selfMsg = new cMessage("announceTimer");
         locator = UniSphereLocator(); // empty Locator
 

@@ -69,6 +69,8 @@ static bool routeMatches(const Ipv4Route *entry, const Ipv4Address& target, cons
 void HierarchicalLocAssignAlgo::initialize(int stage) {
     RoutingProtocolBase::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
+        ASSERT(strcmp(par("locChangingStrategy"), "end2end") == 0);
+
         // get the routing table to update and subscribe it to the blackboard
         irt.reference(this, "routingTableModule", true);
         ift.reference(this, "interfaceTableModule", true);

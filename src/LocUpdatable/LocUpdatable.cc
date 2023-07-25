@@ -21,8 +21,7 @@ const simsignal_t LocUpdatable::newLocAssignedSignal = cComponent::registerSigna
 const simsignal_t LocUpdatable::oldLocRemovedSignal  = cComponent::registerSignal("oldLocatorUnreachable");
 
 LocUpdatable::LocUpdatable() {
-    // TODO Auto-generated constructor stub
-
+//    ASSERT(strcmp(par("locChangingStrategy"), "end2end") == 0);
 }
 
 LocUpdatable::~LocUpdatable() {

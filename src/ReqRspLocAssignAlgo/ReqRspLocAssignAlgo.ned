@@ -32,6 +32,9 @@ simple HierarchicalLocAssignAlgo {
         string oldLocInterface = default("");
         // server
         int maxNumClients = default(-1); // maximum number of clients (IPs) allowed to be leased
+
+        // Should be part of general control plane, not this/here
+        string locChangingStrategy = default("end2end"); // Which strategy to use for Loc changes
     gates:
         input networkLayerIn;
         output networkLayerOut;

@@ -28,6 +28,9 @@ module UniSphereControlPlane {
         string routingTableModule;
         string interfaceTableModule;
         bool forwarding = default(true);
+
+        // Should be part of general control plane, not this/here
+        string locChangingStrategy = default("end2end"); // Which strategy to use for Loc changes
     gates:
         input networkLayerIn;
         output networkLayerOut;
