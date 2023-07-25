@@ -18,7 +18,7 @@ package prototype.simulations;
 import prototype.DelayLink;
 import prototype.LocNodes.*;
 
-network Wifi_4G extends basic_network
+network Wifi_4G_min_test extends basic_network
 {
     parameters:
         int numUsers;
