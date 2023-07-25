@@ -1,0 +1,10 @@
+<config>
+	<interface hosts='server' address='10.1.1.x' netmask='255.255.255.x' />
+	<interface hosts='homes[*]' names="wlan0" address='10.2.x.x' netmask='255.255.255.0' />
+<!--
+	<interface hosts='homes1[*]' names="wlan0" address='10.3.x.x' netmask='255.255.255.0' />
+	<interface hosts="mobileTower[*]" names="wlan0" address="10.4.x.x" netmask="255.255.255.0"/>
+	-->
+	<interface hosts='**' names='ppp*' address='10.x.x.x' netmask='255.x.x.x'/>
+	<autoroute />
+</config>
