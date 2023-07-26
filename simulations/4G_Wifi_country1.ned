@@ -21,11 +21,12 @@ import prototype.LocNodes.*;
 network Wifi_4G_country1 extends basic_network
 {
     parameters:
-        @display("bgb=4000,4000;bgg=100,1,grey95");
+        @display("bgb=1000,1000;bgg=100,1,grey95");
         int numUsers;
         int numHomesPerStreet;
         int numStreetsPerCity;
         int numCities;
+        int num4G;
 
         @figure[title](type=label; pos=0,-1; anchor=sw; color=darkblue);
 
@@ -48,9 +49,7 @@ network Wifi_4G_country1 extends basic_network
         providerY: RoutingNode {
             @display("p=264.6154,121.53847");
         }
-        mobileTower[2]: NeighbourNode {
-            @display("p=196.15385,356.15387,,300");
-        }
+        mobileTower[num4G]: NeighbourNode;
         IXP: RoutingNode {
             @display("p=356.9231,328.46155");
         }
@@ -64,11 +63,11 @@ network Wifi_4G_country1 extends basic_network
         streetCabin[numStreetsPerCity*numCities]: RoutingNode;
         cityCabin[numCities]: RoutingNode;
     connections:
-        server.pppg++ <--> DelayLink <--> providerY.pppg++;
+        server.pppg++ <--> DelayLink {delay=30ms;} <--> providerY.pppg++;
         for i=0..2-1 {
             mobileTower[i].pppg++ <--> DelayLink <--> providerX.pppg++;
         }
-        providerY.pppg++ <--> DelayLink <--> backbone.pppg++;
+        providerY.pppg++ <--> DelayLink {delay=15ms;} <--> backbone.pppg++;
         IXP.pppg++ <--> DelayLink <--> backbone.pppg++;
         IXP.pppg++ <--> DelayLink <--> providerX.pppg++;
         for i=0..numCities-1 {
