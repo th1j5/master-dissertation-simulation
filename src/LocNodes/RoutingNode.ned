@@ -23,8 +23,9 @@ import prototype.UniSphere.*;
 import prototype.ReqRspLocAssignAlgo.*;
 
 //
-// TODO auto-generated module
+// All nodes used by our experiments
 //
+
 module ScalableRouter extends Router {
     parameters:
         *.routingTableModule = default("^.generic.routingTable");

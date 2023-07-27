@@ -24,7 +24,5 @@ LocUpdatable::LocUpdatable() {
 //    ASSERT(strcmp(par("locChangingStrategy"), "end2end") == 0);
 }
 
-LocUpdatable::~LocUpdatable() {
-    // TODO Auto-generated destructor stub
-}
+LocUpdatable::~LocUpdatable() {}
 

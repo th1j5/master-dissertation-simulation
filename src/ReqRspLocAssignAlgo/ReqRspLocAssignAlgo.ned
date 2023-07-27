@@ -16,7 +16,8 @@
 package prototype.ReqRspLocAssignAlgo;
 
 //
-// TODO auto-generated module
+// A Request Respons Locator Assignement Algorithm
+// which asks it parent what address it should use.
 //
 simple HierarchicalLocAssignAlgo {
     parameters:

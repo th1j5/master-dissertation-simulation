@@ -16,7 +16,7 @@
 package prototype.AdjacencyManager;
 
 //
-// TODO auto-generated module
+// Decides when to connect to neighbours.
 //
 simple AdjacencyManager
 {

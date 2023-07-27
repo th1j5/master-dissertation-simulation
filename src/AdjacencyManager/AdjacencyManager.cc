@@ -282,10 +282,7 @@ inet::units::values::m AdjacencyManager::getDistance(cModule *otherNode) {
     return (units::values::m) selfPos.distance(otherPos);
 }
 
-AdjacencyManager::AdjacencyManager() {
-    // TODO Auto-generated constructor stub
-
-}
+AdjacencyManager::AdjacencyManager() {}
 
 AdjacencyManager::~AdjacencyManager() {
     if (host != nullptr && host->isSubscribed(IMobility::mobilityStateChangedSignal, this))

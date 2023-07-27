@@ -36,13 +36,9 @@ Define_Module(HierarchicalLocAssignAlgo);
  * But in very limited cases multiple MNs could get the same ID (if they get both the same IPv4 at different times for the first time)
  * Or it could go horribly wrong... because MN ifaces aren't yet assigned at initialization
  */
-HierarchicalLocAssignAlgo::HierarchicalLocAssignAlgo() {
-    // TODO Auto-generated constructor stub
-
-}
+HierarchicalLocAssignAlgo::HierarchicalLocAssignAlgo() {}
 
 HierarchicalLocAssignAlgo::~HierarchicalLocAssignAlgo() {
-    // TODO Auto-generated destructor stub
     leased.clear();
     if (host != nullptr && host->isSubscribed(AdjacencyManager::newNeighbourConnectedSignal, this))
         host->unsubscribe(AdjacencyManager::newNeighbourConnectedSignal, this);

@@ -208,11 +208,6 @@ void UniSphereForwarding::encapsulate(Packet *transportPacket, const NetworkInte
     insertNetworkProtocolHeader(transportPacket, Protocol::nextHopForwarding, header);
 }
 
-UniSphereForwarding::UniSphereForwarding() {
-    // TODO Auto-generated constructor stub
+UniSphereForwarding::UniSphereForwarding() {}
 
-}
-
-UniSphereForwarding::~UniSphereForwarding() {
-    // TODO Auto-generated destructor stub
-}
+UniSphereForwarding::~UniSphereForwarding() {}

@@ -17,7 +17,8 @@ import inet.common.TagBase;
 import Locator;
 
 //
-// TODO generated message class
+// Tag to communicate between UDP-app (the flow allocator part) and U-Sphere data plane (encapsulation)
+// This says what the destination locator should be
 //
 class LocatorReq extends inet::TagBase {
     Locator destLoc;

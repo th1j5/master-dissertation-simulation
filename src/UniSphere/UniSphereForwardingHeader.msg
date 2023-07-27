@@ -17,7 +17,7 @@ import RoutingPath;
 import inet.networklayer.nexthop.NextHopForwardingHeader;
 
 //
-// TODO generated message class
+// Extends the NextHopForwardingHeader with the U-Sphere locator
 //
 
 class UniSphereForwardingHeader extends inet::NextHopForwardingHeader {

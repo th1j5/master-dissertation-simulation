@@ -29,9 +29,7 @@
 using namespace inet; // more OK to use in .cc
 Define_Module(UniSphereControlPlane);
 
-UniSphereControlPlane::UniSphereControlPlane() {
-    // TODO Auto-generated constructor stub
-}
+UniSphereControlPlane::UniSphereControlPlane() {}
 
 UniSphereControlPlane::~UniSphereControlPlane() {
     cancelAndDelete(selfMsg);

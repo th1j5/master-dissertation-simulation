@@ -191,12 +191,7 @@ cModule* NodeIDToLocatorResolver::findHostWithAddress(const L3Address& addr) {
     return nullptr;
 }
 
-NodeIDToLocatorResolver::NodeIDToLocatorResolver() {
-    // TODO Auto-generated constructor stub
+NodeIDToLocatorResolver::NodeIDToLocatorResolver() {}
 
-}
-
-NodeIDToLocatorResolver::~NodeIDToLocatorResolver() {
-    // TODO Auto-generated destructor stub
-}
+NodeIDToLocatorResolver::~NodeIDToLocatorResolver() {}
 

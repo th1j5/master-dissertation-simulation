@@ -16,8 +16,9 @@
 import inet.common.packet.chunk.Chunk;
 import inet.networklayer.common.L3Address;
 import RoutingPath;
+
 //
-// TODO generated message class
+// Control messages used by UniSphere
 //
 
 enum MessageType {
