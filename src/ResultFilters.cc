@@ -63,7 +63,8 @@ void LossTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObjec
             intval_t currentDestLoc = (intval_t) multiplexPacket->getLocUpdateCorrelationID();
 
             // check invariants
-            ASSERT2(last_seqnum_old < seqnum, "A packet older (or equally old) than the oldest remembered packet has arrived.");
+            if (!(last_seqnum_old < seqnum))
+                throw cRuntimeError("A packet older (or equally old) than the oldest remembered packet has arrived.");
 //            ASSERT(oldLocator+1 == newLocator); // a jump was taken
             if (oldLocator < currentDestLoc)
                 ASSERT2(last_seqnum_old < seqnum, "A newer locator has an older sequence number?!");
@@ -73,7 +74,8 @@ void LossTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObjec
             if (currentDestLoc == -1)
                 return; // skip first packet
             if (oldLocator == -1) {
-                ASSERT2(rerouted == 0, "the first packet to a new locator is already rerouted?!");
+                if (rerouted != 0)
+                    throw cRuntimeError("the first packet to a new locator is already rerouted?!");
                 oldLocator = currentDestLoc-1; ASSERT(oldLocator != -1);
                 newLocator = currentDestLoc;
                 last_seqnum_new = seqnum-1; // update follows
@@ -83,7 +85,8 @@ void LossTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObjec
 
             // If a loss time is calculated, fire
             if (newLocator < currentDestLoc) {
-                ASSERT2(rerouted == 0, "the first packet to a new locator is already rerouted?!");
+                if (rerouted != 0)
+                    throw cRuntimeError("the first packet to a new locator is already rerouted?!");
                 int lostPackets;
                 if (first_seqnum_rerouted_old == -1)
                     lostPackets = first_seqnum_new - last_seqnum_old - 1;
