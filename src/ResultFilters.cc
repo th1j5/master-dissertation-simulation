@@ -110,7 +110,11 @@ void LossTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObjec
                     last_seqnum_old++;
                     return;
                 }
-                ASSERT2(rerouted > 0, "Not rerouted, but there is still a gap between packets??");
+                if (rerouted == 0) { // TODO: how do we take this into account in statistics?
+                    last_seqnum_old = seqnum;
+                    EV_WARN << "Not rerouted, but there is still a gap between packets?? (oldLoc)" << endl;
+                    return;
+                }
                 if (first_seqnum_rerouted_old == -1) {
                     /*first rerouted pkt*/
                     first_seqnum_rerouted_old = seqnum;

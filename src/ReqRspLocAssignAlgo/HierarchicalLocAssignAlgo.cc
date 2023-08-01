@@ -143,19 +143,23 @@ void HierarchicalLocAssignAlgo::receiveSignal(cComponent *source, simsignal_t si
     }
     if (client && signalID == AdjacencyManager::oldNeighbourDisconnectedSignal) {
         // cfr. fixDynamicRoutesClient - not part of locAssigning...
-
-        ASSERT(leased.count(getHostID(neigh)) == 1);
-        auto &locToRemove = leased.at(getHostID(neigh));
-        auto *ieLocToRemove = ift->findInterfaceByAddress(locToRemove);
-        ASSERT(ieLocToRemove);
-        // remove Loc
-        removeLocClient(ieLocToRemove);
-        // if we removed the active Loc
-        if (chooseInterface(par("newLocInterface")) == ieLocToRemove) {
-            //TODO: throw cRuntimeError("not yet implemented");
-            irt->deleteRoute(irt->getDefaultRoute());
-            // make old Loc active again
-            // should also remove default gateway if it's the last...
+        if (auto locToRemoveIt = leased.find(getHostID(neigh)); locToRemoveIt != leased.end()) {
+            //auto &locToRemove = leased.at(getHostID(neigh));
+            auto &locToRemove = locToRemoveIt->second;
+            leased.erase(locToRemoveIt);
+            auto *ieLocToRemove = ift->findInterfaceByAddress(locToRemove);
+            ASSERT(ieLocToRemove);
+            // remove Loc
+            removeLocClient(ieLocToRemove);
+            // if we removed the active Loc
+            if (chooseInterface(par("newLocInterface")) == ieLocToRemove) {
+                //TODO: throw cRuntimeError("not yet implemented");
+                irt->deleteRoute(irt->getDefaultRoute());
+                // make old Loc active again
+                // should also remove default gateway if it's the last...
+            }
+        } else {
+            EV_WARN << "Did not yet receive a locator from server, already disconnecting." << endl;
         }
     }
     if (server && signalID == AdjacencyManager::newNeighbourConnectedSignal) {
