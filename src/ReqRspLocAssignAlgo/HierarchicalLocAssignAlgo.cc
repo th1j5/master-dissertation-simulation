@@ -389,7 +389,7 @@ void HierarchicalLocAssignAlgo::removeLocClient(NetworkInterface* ie) {
         EV_WARN << "Deleting a Loc" << endl;
         ipv4DataOld->setIPAddress(Ipv4Address());
         ipv4DataOld->setNetmask(Ipv4Address());
-//        emit(oldLocRemovedSignal, numLocUpdates);
+        emit(oldLocRemovedSignal, numLocUpdates);
     }
     //TODO: remove
 
