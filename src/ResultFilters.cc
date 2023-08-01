@@ -86,14 +86,12 @@ void LossTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObjec
                 ASSERT2(rerouted == 0, "the first packet to a new locator is already rerouted?!");
                 int lostPackets;
                 if (first_seqnum_rerouted_old == -1)
-                    lostPackets = first_seqnum_new - last_seqnum_old;
+                    lostPackets = first_seqnum_new - last_seqnum_old - 1;
                 else
-                    lostPackets = first_seqnum_rerouted_old - last_seqnum_old;
+                    lostPackets = first_seqnum_rerouted_old - last_seqnum_old - 1;
                 // skip first bogus measurement
                 if (last_seqnum_old != -1)
                     fire(this, t, (intval_t) lostPackets, details); //TODO FIXME!
-                else
-                    fire(this, t, (intval_t) lostPackets, details); //TODO: remove
                 oldLocator = newLocator;
                 newLocator = currentDestLoc;
                 last_seqnum_old = last_seqnum_new;

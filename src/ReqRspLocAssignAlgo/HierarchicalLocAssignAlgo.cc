@@ -143,6 +143,8 @@ void HierarchicalLocAssignAlgo::receiveSignal(cComponent *source, simsignal_t si
     }
     if (client && signalID == AdjacencyManager::oldNeighbourDisconnectedSignal) {
         // cfr. fixDynamicRoutesClient - not part of locAssigning...
+
+        ASSERT(leased.count(getHostID(neigh)) == 1);
         auto &locToRemove = leased.at(getHostID(neigh));
         auto *ieLocToRemove = ift->findInterfaceByAddress(locToRemove);
         ASSERT(ieLocToRemove);
