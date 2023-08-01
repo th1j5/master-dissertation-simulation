@@ -21,6 +21,7 @@ import inet.applications.contract.IApp;
 import prototype.AdjacencyManager.*;
 import prototype.UniSphere.*;
 import prototype.ReqRspLocAssignAlgo.*;
+import prototype.LocUpdatable.*;
 
 //
 // All nodes used by our experiments
@@ -36,11 +37,11 @@ module ScalableRouter extends Router {
             parameters:
                 @display("p=125,320");
         }
-        unisphere: UniSphereControlPlane if exists(generic) { // might need an interface: "like IOspf" in inet.routing.contract
+        unisphere: <"UniSphereControlPlane"> like ILocUpdatable if exists(generic) { // might need an interface: "like IOspf" in inet.routing.contract
             parameters:
                 @display("p=975,226");
         }
-        hierLocAssignAlgo: HierarchicalLocAssignAlgo if exists(ipv4) {
+        hierLocAssignAlgo: <"HierarchicalLocAssignAlgo"> like ILocUpdatable if exists(ipv4) {
             parameters:
                 @display("p=1000,226");
         }
@@ -64,11 +65,11 @@ module MobileScalableRouter extends ManetRouter {
             parameters:
                 @display("p=125,320");
         }
-        unisphere: UniSphereControlPlane if exists(generic) { // might need an interface: "like IOspf" in inet.routing.contract
+        unisphere: <"UniSphereControlPlane"> like ILocUpdatable if exists(generic) { // might need an interface: "like IOspf" in inet.routing.contract
             parameters:
                 @display("p=975,226");
         }
-        hierLocAssignAlgo: HierarchicalLocAssignAlgo if exists(ipv4) {
+        hierLocAssignAlgo: <"HierarchicalLocAssignAlgo"> like ILocUpdatable if exists(ipv4) {
             parameters:
                 @display("p=1000,226");
         }

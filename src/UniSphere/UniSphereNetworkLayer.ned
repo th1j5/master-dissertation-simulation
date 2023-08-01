@@ -21,10 +21,16 @@ import inet.networklayer.arp.ipv4.GlobalArp;
 import inet.networklayer.common.EchoProtocol;
 import inet.networklayer.contract.INetworkLayer;
 
-module UniSphereControlPlane {
+import prototype.LocUpdatable.*;
+
+module UniSphereControlPlane like ILocUpdatable {
     parameters:
         @class(UniSphereControlPlane);
+        @signal[neighLocatorUpdateSent](type=inet::Packet);
+        @signal[oldLocatorUnreachable](type=int); // int numLocUpdates
         @signal[newLocatorAssigned](type=int); // int numLocUpdates
+        @statistic[oldLocatorUnreachable](title="old locator becomes unreachable";record=vector(locUpdateCorrelation); interpolationmode=none;);
+        @statistic[newLocatorAssigned](title="new locator assigned";record=vector(locUpdateCorrelation); interpolationmode=none;);
         string routingTableModule;
         string interfaceTableModule;
         bool forwarding = default(true);

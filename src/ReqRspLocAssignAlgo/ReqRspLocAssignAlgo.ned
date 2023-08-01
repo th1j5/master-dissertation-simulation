@@ -15,15 +15,20 @@
 
 package prototype.ReqRspLocAssignAlgo;
 
+import prototype.LocUpdatable.*;
+
 //
 // A Request Respons Locator Assignement Algorithm
 // which asks it parent what address it should use.
 //
-simple HierarchicalLocAssignAlgo {
+simple HierarchicalLocAssignAlgo like ILocUpdatable {
     parameters:
         @class(HierarchicalLocAssignAlgo);
-        @signal[newLocatorAssigned](type=int); // int numLocUpdates
+        @signal[neighLocatorUpdateSent](type=inet::Packet);
         @signal[oldLocatorUnreachable](type=int); // int numLocUpdates
+        @signal[newLocatorAssigned](type=int); // int numLocUpdates
+        @statistic[oldLocatorUnreachable](title="old locator becomes unreachable";record=vector(locUpdateCorrelation); interpolationmode=none;);
+        @statistic[newLocatorAssigned](title="new locator assigned";record=vector(locUpdateCorrelation); interpolationmode=none;);
         string routingTableModule;
         string interfaceTableModule;
         bool client = default(false);
