@@ -52,14 +52,14 @@ network Wifi_4G_city1 extends basic_network
         mobileTower[num4G]: NeighbourNode {
             @display("i=device/antennatower_l");
         }
-        IXP: RoutingNode {
-            //@display("p=356.9231,328.46155");
-        }
         providerX: RoutingNode {
-            @display("p=400,-30");
+            @display("p=500,-30");
         }
         backbone: RoutingNode {
-            //@display("p=366.9231,122.30769");
+            @display("p=366,-25");
+        }
+        IXP: RoutingNode {
+            @display("p=433,-35");
         }
         homes[numHomesPerStreet*numStreetsPerQuarter*numQuarters]: NeighbourNode {
             @display("i=device/accesspoint_s");
@@ -72,7 +72,7 @@ network Wifi_4G_city1 extends basic_network
         }
     connections:
         server.pppg++ <--> DelayLink {delay=30ms;} <--> providerY.pppg++;
-        for i=0..2-1 {
+        for i=0..num4G-1 {
             mobileTower[i].pppg++ <--> DelayLink <--> providerX.pppg++;
         }
         providerY.pppg++ <--> DelayLink {delay=15ms;} <--> backbone.pppg++;
