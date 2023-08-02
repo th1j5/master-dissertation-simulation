@@ -359,10 +359,10 @@ void UniSphereControlPlane::receiveSignal(cComponent *source, simsignal_t signal
         announceOurselves(check_and_cast<cModule*>(neigh));
         numNewNeighConnected++;
         if (!forwarding) {
-            // Update RIB separation IF I'm a MN
+            // Update RIB separation IF I'm a MN - done by numNewNeighConnected
         }
     }
-    //case /*TODO: peerRemoved*/:
+    /*case peerRemoved*/
     else if (signalID == AdjacencyManager::oldNeighbourDisconnectedSignal) {
         L3Address peerID = getHostID(check_and_cast<cModule*>(neigh));
         retract(peerID, L3Address());
@@ -444,7 +444,7 @@ void UniSphereControlPlane::networkSizeEstimateChanged(int size) {
 bool UniSphereControlPlane::selectLocalAddress() {
     /**
      * only select from the latest DTPM or RIB
-     * This means that we proactively choose the landmark to change
+     * This means that we proactively choose the landmark to change (disable forwarding if you don't want this)
      */
     auto selfID = getHostID(host);
     if (selfAnnounce->isLandmark()) {
@@ -458,9 +458,14 @@ bool UniSphereControlPlane::selectLocalAddress() {
         UniSphereRoute* bestLandmark = nullptr;
         for (int i = 0; i < irt->getNumRoutes(); ++i) {
             UniSphereRoute* re = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
-            if (re->isLandmark()
-                    && (bestLandmark == nullptr || re->RIB >= bestLandmark->RIB)
-                    && (bestLandmark == nullptr || re->getMetric() < bestLandmark->getMetric()))
+            /* Only select candidate if:
+             * - Landmark && ( no candidate yet || newer RIB || better metric && same RIB )
+             * There is no way the landmark will be from the old RIB (landmarks everywhere reachable)
+             */
+            if (re->isLandmark() &&
+                    (bestLandmark == nullptr
+                     || re->RIB > bestLandmark->RIB
+                     || (re->getMetric() < bestLandmark->getMetric() && re->RIB == bestLandmark.RIB)))
             {
                 bestLandmark = re;
             }

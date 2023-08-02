@@ -67,6 +67,7 @@ std::string UniSphereRoute::str() const {
     out << (active   ? "A" : "..");
     out << (vicinity ? "V" : "..") << " ";
     out << "seq:" << seqno << " ";
+    out << "RIB:" << RIB << " ";
     out << "R:" << reversePath << " ";
     out << "F:" << forwardPath << " ";
 
