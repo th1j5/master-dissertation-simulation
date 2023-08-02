@@ -209,7 +209,8 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
         // EITHER: it was active
         // OR it is an uninitialized neighbour
         // IF NOT: then we have non-active routes in our system being updated...
-        ASSERT(oldRoute->active || isUnitializedNeighbour(oldRoute));
+        if(!(oldRoute->active || isUnitializedNeighbour(oldRoute)))
+            throw cRuntimeError("non-active routes are updated");
         newRoute->active = oldRoute->active;
         newRoute->vicinity = oldRoute->vicinity;
         if (isUnitializedNeighbour(oldRoute)) {
@@ -233,7 +234,7 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
                 EV_WARN << "We have a local star-topology, where there are more neighbours than places in the RT." << endl;
                 if (newRoute->getMetric() == 0) {
                     EV_WARN << "Even some neighbour entries are not accepted." << endl;
-                    ASSERT(false); // should not be possible to be both neighbour & new, due to our approach in OMNeT
+                    throw cRuntimeError("should not be possible to be both neighbour & new, due to our approach in OMNeT");
                 }
             }
             if (vicinity.maxHopEntry->getMetric() > newRoute->getMetric()) {
@@ -464,7 +465,8 @@ bool UniSphereControlPlane::selectLocalAddress() {
                 bestLandmark = re;
             }
         }
-        ASSERT(bestLandmark); // there is no known landmark??
+        if (!bestLandmark)
+            throw cRuntimeError("there is no known landmark??");
         if (locator.ID == selfID
                 && locator.path.size() > 0
                 && locator.path.top() == bestLandmark->getDestinationAsGeneric()) // FIXME: correct way?
