@@ -455,7 +455,7 @@ bool UniSphereControlPlane::selectLocalAddress() {
     }
     else {
         // If not self landmark
-        UniSphereRoute* bestLandmark = nullptr;
+        UniSphereRoute* bestL = nullptr; // Best landmark
         for (int i = 0; i < irt->getNumRoutes(); ++i) {
             UniSphereRoute* re = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
             /* Only select candidate if:
@@ -463,23 +463,23 @@ bool UniSphereControlPlane::selectLocalAddress() {
              * There is no way the landmark will be from the old RIB (landmarks everywhere reachable)
              */
             if (re->isLandmark() &&
-                    (bestLandmark == nullptr
-                     || re->RIB > bestLandmark->RIB
-                     || (re->getMetric() < bestLandmark->getMetric() && re->RIB == bestLandmark.RIB)))
+                    (bestL == nullptr
+                     || re->RIB > bestL->RIB
+                     || (re->getMetric() < bestL->getMetric() && re->RIB == bestL->RIB)))
             {
-                bestLandmark = re;
+                bestL = re;
             }
         }
-        if (!bestLandmark)
+        if (!bestL)
             throw cRuntimeError("there is no known landmark??");
         if (locator.ID == selfID
                 && locator.path.size() > 0
-                && locator.path.top() == bestLandmark->getDestinationAsGeneric()) // FIXME: correct way?
+                && locator.path.top() == bestL->getDestinationAsGeneric()) // FIXME: correct way?
             return false;
         locator.ID = getHostID(host);
         locator.path = RoutingPath();
         // reverse_copy
-        auto temp = bestLandmark->forwardPath;
+        auto temp = bestL->forwardPath;
         while(!temp.empty()) {
             locator.path.push(temp.top());
             temp.pop();
