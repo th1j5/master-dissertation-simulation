@@ -7,6 +7,7 @@
 #include "ResultFilters.h"
 
 #include "inet/common/packet/Packet.h"
+
 #include "LocatorUpdatePacket_m.h"
 #include "LocUpdatable/LocUpdatable.h"
 
@@ -148,8 +149,8 @@ void LossTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObjec
                     return;
                 }
             }
-
-            throw cRuntimeError("unhandled case for calculating loss Time");
+            throw cRuntimeError("unhandled case for calculating loss Time.\
+            oldLoc=%ld, newLoc=%ld, curLoc=%ld, seqnum=%d", oldLocator, newLocator, currentDestLoc, seqnum);
         }
     }
 }
@@ -168,4 +169,12 @@ void UDPDataFilter::init(Context *ctx) {
 }
 UDPDataFilter::~UDPDataFilter() {
     delete packetFilter;
+}
+
+Register_ResultFilter("nodeID", NodeIDFilter);
+void NodeIDFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
+    if (auto node = dynamic_cast<cModule*>(object)) {
+        auto nodeID = node->getId();
+        fire(this, t, (intval_t) nodeID, details);
+    }
 }

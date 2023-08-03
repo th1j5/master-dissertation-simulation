@@ -64,4 +64,11 @@ class UDPDataFilter: public cObjectResultFilter {
 #pragma clang diagnostic pop
 };
 
+class NodeIDFilter: public cObjectResultFilter {
+  public:
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
+    virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
+#pragma clang diagnostic pop
+};
 #endif /* RESULTFILTERS_H_ */
