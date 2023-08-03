@@ -24,6 +24,8 @@ simple AdjacencyManager
         @class(AdjacencyManager);
         @signal[newNeighConnected](type=cModule);
         @signal[oldNeighDisconnected](type=cModule);
+        @statistic[newNeighConnected](title="new neigh link"; record=vector(nodeID); interpolationmode=none;);
+        @statistic[oldNeighDisconnected](title="old neigh "; record=vector(nodeID); interpolationmode=none;);
         string interfaceTableModule; // path to the InterfaceTable module
         string routingTableModule; // path to the Ipv4RoutingTable module
 //        @display("i=block/app2");
