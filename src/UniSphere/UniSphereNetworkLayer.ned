@@ -26,11 +26,13 @@ import prototype.LocUpdatable.*;
 module UniSphereControlPlane like ILocUpdatable {
     parameters:
         @class(UniSphereControlPlane);
+        @signal[isLandmark](type=bool);
         @signal[neighLocatorUpdateSent](type=inet::Packet);
         @signal[oldLocatorUnreachable](type=int); // int numLocUpdates
         @signal[newLocatorAssigned](type=int); // int numLocUpdates
         @statistic[oldLocatorUnreachable](title="old locator becomes unreachable";record=vector(locUpdateCorrelation); interpolationmode=none;);
         @statistic[newLocatorAssigned](title="new locator assigned";record=vector(locUpdateCorrelation); interpolationmode=none;);
+        @statistic[isLandmark](title="landmark?";record=last;);
         string routingTableModule;
         string interfaceTableModule;
         bool forwarding = default(true);

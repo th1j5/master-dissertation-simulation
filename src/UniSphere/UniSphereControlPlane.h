@@ -46,6 +46,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
 
 
   public:
+    static const simsignal_t isLandmarkSignal;
     virtual UniSphereLocator getLocator() { return locator; }
 
     UniSphereControlPlane();

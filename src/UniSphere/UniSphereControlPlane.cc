@@ -29,6 +29,8 @@
 using namespace inet; // more OK to use in .cc
 Define_Module(UniSphereControlPlane);
 
+const simsignal_t UniSphereControlPlane::isLandmarkSignal = cComponent::registerSignal("isLandmark");
+
 UniSphereControlPlane::UniSphereControlPlane() {}
 
 UniSphereControlPlane::~UniSphereControlPlane() {
@@ -449,9 +451,10 @@ void UniSphereControlPlane::networkSizeEstimateChanged(int size) {
 
     // TODO: Only flip landmark status if size has changed by at least a factor 2
     if (x < std::sqrt(std::log(n) / n)) {
-      EV_WARN << "Becoming a LANDMARK." << endl;
-      selfAnnounce->setLandmark(true);
+        EV_WARN << "Becoming a LANDMARK." << endl;
+        selfAnnounce->setLandmark(true);
     }
+    emit(isLandmarkSignal, selfAnnounce->isLandmark());
 }
 
 bool UniSphereControlPlane::selectLocalAddress() {
