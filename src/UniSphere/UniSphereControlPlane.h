@@ -62,6 +62,7 @@ class UniSphereControlPlane: public inet::RoutingProtocolBase, protected omnetpp
     UniSphereLocator locator; // we only need to keep the last, because all packets are accepted regardless of Loc
     // UniSphereLocator oldLocator;
     bool forwarding = false;
+    bool firstLocUpdateAfterTopologyChange = true; // only increment numLocUpdates once for each newNeighConnected
 
     // parameters
 //    cModule *host = nullptr; // defined in LocUpdatable

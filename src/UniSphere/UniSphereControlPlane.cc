@@ -270,8 +270,16 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
         /*TODO?*/;
 
     // Determine whether local address has changed
-    if (newRoute->isLandmark() || landmarkChangedType)
-        selectLocalAddress();
+    if (newRoute->isLandmark() || landmarkChangedType) {
+        if(selectLocalAddress()) {
+            // TODO!! removeOldLoc
+            if (firstLocUpdateAfterTopologyChange) {
+                numLocUpdates++;
+                firstLocUpdateAfterTopologyChange = false;
+            }
+            emit(newLocAssignedSignal, numLocUpdates, new Locator(locator));
+        }
+    }
 
     return importedNewRoute;
 }
@@ -358,6 +366,7 @@ void UniSphereControlPlane::receiveSignal(cComponent *source, simsignal_t signal
     if (signalID == AdjacencyManager::newNeighbourConnectedSignal) {
         announceOurselves(check_and_cast<cModule*>(neigh));
         numNewNeighConnected++;
+        firstLocUpdateAfterTopologyChange = true;
         if (!forwarding) {
             // Update RIB separation IF I'm a MN - done by numNewNeighConnected
         }
@@ -366,6 +375,10 @@ void UniSphereControlPlane::receiveSignal(cComponent *source, simsignal_t signal
     else if (signalID == AdjacencyManager::oldNeighbourDisconnectedSignal) {
         L3Address peerID = getHostID(check_and_cast<cModule*>(neigh));
         retract(peerID, L3Address());
+        /* since new locator is proactively chosen, we can assume this
+         * means that the old Locator isn't reachable anymore when a peer disconnects (old neigh)
+         * packets could however by chance still reach the node, because the ID can be enough to route. */
+        emit(oldLocRemovedSignal, numLocUpdates);
     }
     /*case routingEntryExpired?*/
     else
@@ -485,9 +498,6 @@ bool UniSphereControlPlane::selectLocalAddress() {
             temp.pop();
         }
     }
-    // TODO!! removeOldLoc
-    numLocUpdates++;
-    emit(newLocAssignedSignal, numLocUpdates, new Locator(locator));
     return true;
 }
 
