@@ -23,6 +23,7 @@ import prototype.LocUpdatable.*;
 //
 simple HierarchicalLocAssignAlgo like ILocUpdatable {
     parameters:
+        @display("i=block/table2_l");
         @class(HierarchicalLocAssignAlgo);
         @signal[neighLocatorUpdateSent](type=inet::Packet);
         @signal[oldLocatorUnreachable](type=int); // int numLocUpdates

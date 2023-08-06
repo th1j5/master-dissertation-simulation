@@ -21,6 +21,7 @@ package prototype.AdjacencyManager;
 simple AdjacencyManager
 {
     parameters:
+        @display("i=block/network2_l");
         @class(AdjacencyManager);
         @signal[newNeighConnected](type=cModule);
         @signal[oldNeighDisconnected](type=cModule);
@@ -28,5 +29,4 @@ simple AdjacencyManager
         @statistic[oldNeighDisconnected](title="old neigh "; record=vector(nodeID); interpolationmode=none;);
         string interfaceTableModule; // path to the InterfaceTable module
         string routingTableModule; // path to the Ipv4RoutingTable module
-//        @display("i=block/app2");
 }

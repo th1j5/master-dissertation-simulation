@@ -25,6 +25,7 @@ import prototype.LocUpdatable.*;
 
 module UniSphereControlPlane like ILocUpdatable {
     parameters:
+        @display("i=block/control_l");
         @class(UniSphereControlPlane);
         @signal[isLandmark](type=bool);
         @signal[neighLocatorUpdateSent](type=inet::Packet);
