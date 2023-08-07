@@ -490,7 +490,8 @@ bool UniSphereControlPlane::selectLocalAddress() {
             throw cRuntimeError("there is no known landmark??");
         if (locator.ID == selfID
                 && locator.path.size() > 0
-                && locator.path.top() == bestL->getDestinationAsGeneric()) // FIXME: correct way?
+                && locator.path.top() == bestL->getDestinationAsGeneric()
+                && locator.path == bestL->forwardPath) // FIXME: correct way?
             return false;
         locator.ID = getHostID(host);
         locator.path = RoutingPath();
