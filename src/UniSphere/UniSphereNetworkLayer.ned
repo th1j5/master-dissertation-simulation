@@ -97,10 +97,6 @@ module UniSphereDataPlane like INetworkLayer {
         //ttrTable: Ttr if locChangingStrategy == "TTR" {
         //    @display("p=100,400;is=s");
         //}
-//        routingTable: UniSphereRoutingTable {
-//            parameters:
-//                @display("p=100,200;is=s");
-//        }
 
     connections allowunconnected:
         up.out++ --> { @display("m=n"); } --> transportOut;
@@ -120,7 +116,4 @@ module UniSphereDataPlane like INetworkLayer {
 
         lp.in++ <-- { @display("m=s"); } <-- ifIn;
         lp.out++ --> { @display("m=s"); } --> ifOut;
-}
-module UniSphereRoutingTable {
-    @class(UniSphereRoutingTable);
 }
