@@ -262,14 +262,13 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
             return false;
 
         newRoute->vicinity = isVicinity;
-        //irt->addRoute(newRoute); // do this here OR in keepBestRoute()
     }
     // TODO: very different in semantics from selectBestRoute
     // (sBR has triggers in itself AND keeps old entries, just deactivates them)
     bool importedNewRoute = keepBestRoute(newRoute);
     if (true && landmarkChangedType)
         // Landmark type of the currently active route has changed
-        /*TODO?*/;
+        /* nothing todo normaly...*/;
 
     // Determine whether local address has changed
     if (newRoute->isLandmark() || landmarkChangedType) {
@@ -291,18 +290,19 @@ bool UniSphereControlPlane::keepBestRoute(UniSphereRoute* newRoute) {
     // if there is no oldRoute OR if the newRoute is better, add newRoute
     L3Address origin = newRoute->getDestinationAsGeneric();
     auto *oldRoute = check_and_cast_nullable<UniSphereRoute*>(irt->findBestMatchingRoute(origin));
+    irt->addRoute(newRoute);
+
     if (oldRoute == nullptr || newRoute->getMetric() < oldRoute->getMetric()) {
         if (oldRoute) {
-            irt->deleteRoute(oldRoute);
-            // only ever keep 1 route to a destination... (!= U-Sphere)
-            ASSERT(nullptr == irt->findBestMatchingRoute(origin));
+            oldRoute->active = false;
         }
         newRoute->active = true;
-        irt->addRoute(newRoute);
         return true; // imported newRoute
     }
-    else
+    else {
+        newRoute->active = false;
         return false; // kept oldRoute
+    }
 }
 
 bool UniSphereControlPlane::retract(L3Address dest) {
@@ -321,14 +321,17 @@ bool UniSphereControlPlane::retract(L3Address neighSource, L3Address dest) {
         auto *e = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
         if (neighSource == e->getNextHopAsGeneric()
                 && (dest.isUnspecified() || dest == e->getDestinationAsGeneric())) {
-            // U-Sphere: determine new active route, only send if changed
-            if (e->active && true)
+            // U-Sphere: determine new active route, only send retract if no route was actived. Logical, because when a route is actived, this is an implicit retract.
+            if (e->active && true) /*  */
                 sendRetractToAllNeighbours(e);
-            irt->deleteRoute(e);
-            //TODO: U-Sphere
-            //select better route (is hard with our scheme, because we don't keep any non-active routes)
+            //select better route (was harder with our scheme)
             // U-Sphere is an extension of DVR, where multiple advertisements for the same dest are kept
-            // Also a bit like Babel (there, the feasibility condition decides, what we have here is starvation)
+            // Also a bit like Babel (there, the feasibility condition decides, what we have here was starvation)
+            auto destToFix = e->getDestinationAsGeneric();
+            irt->deleteRoute(e);
+            auto newBestRoute = check_and_cast_nullable<UniSphereRoute*>(irt->findBestMatchingRoute(destToFix));
+            if (newBestRoute)
+                newBestRoute->active = true;
         }
     }
     return false;
@@ -399,14 +402,14 @@ size_t UniSphereControlPlane::getMaximumVicinitySize() const
 
 UniSphereControlPlane::CurrentVicinity UniSphereControlPlane::getCurrentVicinity() const {
     // get entries which are: active && inVicinity (&& !extendedVicinity ?)
-    // ASSUMPTION: all entries in RT are active. isVicinity is checked (and no extendedVicinity is used) TODO
+    // isVicinity is checked, active is checked (and no extendedVicinity is used)
     CurrentVicinity vicinity {};
 
     ASSERT(vicinity.size == 0);
     ASSERT(vicinity.maxHopEntry == nullptr);
     for (int i = 0; i < irt->getNumRoutes(); ++i) {
         UniSphereRoute *e = check_and_cast<UniSphereRoute*>(irt->getRoute(i));
-        if (e->vicinity) {
+        if (e->vicinity && e->active) {
             vicinity.size++;
             if (vicinity.maxHopEntry == nullptr || e->getMetric() > vicinity.maxHopEntry->getMetric())
                 vicinity.maxHopEntry = e;
