@@ -88,32 +88,36 @@ void LossTimeRecorder::finish(cResultFilter *prev) {
 
     // start from end, then convert it back to forward_iterator
     auto last_loc_with_stats = std::find_if(locator.rbegin(), locator.rend(), loc_has_pkts).base();
-    for(auto it = ++locator.begin(); it != last_loc_with_stats; it++) {
-        first_seqnum_Vec.recordWithTimestamp(it - locator.begin(), it->first_seqnum);
-        lost_pkt_Vec    .recordWithTimestamp(it - locator.begin(), it->lost_pkt);
-        out_of_order_Vec.recordWithTimestamp(it - locator.begin(), it->out_of_order_pkt);
-        last_seqnum_Vec .recordWithTimestamp(it - locator.begin(), it->last_seqnum);
+    if (last_loc_with_stats == locator.begin());
+        //throw cRuntimeError("No locators with stats..."); // server has no stats...
+    else {
+        for(auto it = ++locator.begin(); it != last_loc_with_stats; it++) {
+            first_seqnum_Vec.recordWithTimestamp(it - locator.begin(), it->first_seqnum);
+            lost_pkt_Vec    .recordWithTimestamp(it - locator.begin(), it->lost_pkt);
+            out_of_order_Vec.recordWithTimestamp(it - locator.begin(), it->out_of_order_pkt);
+            last_seqnum_Vec .recordWithTimestamp(it - locator.begin(), it->last_seqnum);
 
-        if (it->first_seqnum != std::numeric_limits<int>::max()) {
-            auto it_prev = it-1;
-            while (it_prev->last_seqnum == -1) {
-                if (it_prev == locator.begin())
-                    throw cRuntimeError("Tried to go past the beginning");
-                it_prev--;
+            if (it->first_seqnum != std::numeric_limits<int>::max()) {
+                auto it_prev = it-1;
+                while (it_prev->last_seqnum == -1) {
+                    if (it_prev == locator.begin())
+                        throw cRuntimeError("Tried to go past the beginning");
+                    it_prev--;
+                }
+                collect(0, it->first_seqnum - it_prev->last_seqnum - 1, nullptr);
             }
-            collect(0, it->first_seqnum - it_prev->last_seqnum, nullptr);
-        }
-        else {
-            // warn for locators without stats
-            EV_WARN << "Locator change numero" << it - locator.begin() << "has no received data packets" << endl;
-        }
-//        else if (auto next_loc_with_stats = std::find_if(it, locator.end(), loc_has_pkts); next_loc_with_stats != locator.end()) {
-//
-//        }
-        EV_WARN << "Locator change numero " << it-locator.begin() << " has lost " << it->lost_pkt
-                << " packets in a normal stream and " << it->out_of_order_pkt << "out-of-order packets in a normal stream" << endl;
-        if (it->lost_pkt != it->out_of_order_pkt) {
-            //throw cRuntimeError("Locator change numero %ld has lost %d packets in a normal stream and only received %d out-of-order", it-locator.begin(), it->lost_pkt, it->out_of_order_pkt);
+            else {
+                // warn for locators without stats
+                EV_WARN << "Locator change numero" << it - locator.begin() << "has no received data packets" << endl;
+            }
+    //        else if (auto next_loc_with_stats = std::find_if(it, locator.end(), loc_has_pkts); next_loc_with_stats != locator.end()) {
+    //
+    //        }
+            EV_WARN << "Locator change numero " << it-locator.begin() << " has lost " << it->lost_pkt
+                    << " packets in a normal stream and " << it->out_of_order_pkt << "out-of-order packets in a normal stream" << endl;
+            if (it->lost_pkt != it->out_of_order_pkt) {
+                //throw cRuntimeError("Locator change numero %ld has lost %d packets in a normal stream and only received %d out-of-order", it-locator.begin(), it->lost_pkt, it->out_of_order_pkt);
+            }
         }
     }
 
