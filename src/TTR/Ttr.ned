@@ -23,5 +23,5 @@ simple Ttr
 {
     parameters:
         @display("i=block/table");
-    	string networkProtocolModule = default("^.ip");
+        string networkProtocolModule = default("^.nextHop");
 }

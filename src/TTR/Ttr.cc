@@ -15,10 +15,13 @@
 
 #include "Ttr.h"
 
-#include "inet/networklayer/ipv4/Ipv4Header_m.h"
+#include "inet/networklayer/contract/NetworkHeaderBase_m.h"
 #include "inet/networklayer/common/L3Tools.h"
 #include "inet/transportlayer/udp/UdpHeader_m.h"
+
 #include "MultiplexerPacket_m.h"
+#include "util.h"
+#include "UniSphere/UniSphereForwardingHeader_m.h"
 
 using namespace inet; // more OK to use in .cc
 
@@ -47,43 +50,56 @@ std::function< void(const Ptr< MultiplexerPacket > &)> f_increaseReroute = incre
 INetfilter::IHook::Result Ttr::datagramPreRoutingHook(Packet *datagram) {
     //put logic to reroute in flight here
 //    pk->peekAtFront<Ipv4Header>().; // TODO optimise (peek for address, only remove when needed)
-    auto& ipv4Header = removeNetworkProtocolHeader<Ipv4Header>(datagram);
-    auto oldLoc = ipv4Header->getDestinationAddress();
-    auto rerouteEntry = ttrEntries.find(oldLoc);
+    auto& networkHeader = removeNetworkProtocolHeader<NetworkHeaderBase>(datagram);
+    L3Address oldDestName = networkHeader->getDestinationAddress();
+    auto rerouteEntry = ttrEntries.find(oldDestName);
     if (rerouteEntry != ttrEntries.end() && rerouteEntry->second.active) {
-        ipv4Header->setDestinationAddress(rerouteEntry->second.newLoc);
+        if (isUniSphere()) {
+            dynamicPtrCast<UniSphereForwardingHeader>(networkHeader)->setPath(rerouteEntry->second.newLoc.getPath());
+        }
+        else {
+            networkHeader->setDestinationAddress(rerouteEntry->second.newLoc.getFinalDestination());
+        }
         // reroute++
         auto& header = datagram->peekAtFront<UdpHeader>();
         b offset = header->getChunkLength(); // start from the beginning
         datagram->updateDataAt<MultiplexerPacket>(f_increaseReroute, offset);
     }
-    insertNetworkProtocolHeader(datagram, Protocol::ipv4, ipv4Header);
+    if (isUniSphere()) {
+        insertNetworkProtocolHeader(datagram, Protocol::nextHopForwarding, networkHeader);
+    } else {
+        insertNetworkProtocolHeader(datagram, Protocol::ipv4, networkHeader);
+    }
 
     return ACCEPT;
 }
 
-void Ttr::addTTREntry(L3Address newLoc, L3Address oldLoc, simtime_t TTL) {
+void Ttr::addTTREntry(Locator newLoc, L3Address oldDestName, simtime_t TTL) {
     Enter_Method_Silent("Add a TTR Entry");
     cMessage* msg = new cMessage("remove TTR entry");
     scheduleAfter(TTL, msg);
-    bool succes = ttrEntries.insert({oldLoc, {newLoc, false, TTL, msg}}).second;
+    if (isUniSphere()) {
+        if (oldDestName != newLoc.getFinalDestination())
+            throw cRuntimeError("The TTR entry key and value don't correspond for U-Sphere");
+    }
+    bool succes = ttrEntries.insert({oldDestName, {newLoc, false, TTL, msg}}).second;
     if (!succes) {
         cancelAndDelete(msg);
-        throw cRuntimeError("The old locator %s was already inserted in the TTR table for some reason...", oldLoc.str().c_str());
+        throw cRuntimeError("The old locator %s was already inserted in the TTR table for some reason...", oldDestName.str().c_str());
     }
 }
-void Ttr::activateEntry(L3Address oldLoc) {
-    auto entry = ttrEntries.find(oldLoc);
+void Ttr::activateEntry(L3Address oldDestName) {
+    auto entry = ttrEntries.find(oldDestName);
     if (entry != ttrEntries.end()) {
         if (!entry->second.active)
             entry->second.active = true;
         else
-            throw cRuntimeError("TTR entry with oldLoc %s was already active?!", oldLoc.str().c_str());
+            throw cRuntimeError("TTR entry with oldDestName %s was already active?!", oldDestName.str().c_str());
     }
     else {
-        EV_WARN << "TTR entry with oldLoc %s was not found while trying to activate" << endl;
+        EV_WARN << "TTR entry with oldDestName %s was not found while trying to activate" << endl;
         EV_WARN << "This means that the TTL expired BEFORE the link was severed" << endl;
-//        throw cRuntimeError("TTR entry with oldLoc %s not found!", oldLoc.str().c_str());
+//        throw cRuntimeError("TTR entry with oldDestName %s not found!", oldDestName.str().c_str());
     }
 }
 

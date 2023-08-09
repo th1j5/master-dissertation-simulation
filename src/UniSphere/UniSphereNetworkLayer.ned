@@ -52,7 +52,7 @@ module UniSphereForwarding extends NextHopForwarding {
 module UniSphereDataPlane like INetworkLayer {
     parameters:
 //        @class();
-        //string locChangingStrategy;
+        string locChangingStrategy;
 
         bool forwarding = default(false);
         bool multicastForwarding = default(false);
@@ -94,9 +94,9 @@ module UniSphereDataPlane like INetworkLayer {
             parameters:
                 @display("p=450,400;b=480,5");
         }
-        //ttrTable: Ttr if locChangingStrategy == "TTR" {
-        //    @display("p=100,400;is=s");
-        //}
+        ttrTable: Ttr if locChangingStrategy == "TTR" {
+            @display("p=100,400;is=s");
+        }
 
     connections allowunconnected:
         up.out++ --> { @display("m=n"); } --> transportOut;

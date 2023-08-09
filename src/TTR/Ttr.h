@@ -21,6 +21,8 @@
 #include "inet/networklayer/contract/INetfilter.h"
 #include "inet/common/ModuleRefByPar.h"
 
+#include "Locator_m.h"
+
 using namespace omnetpp;
 
 /**
@@ -32,7 +34,7 @@ class Ttr : public cSimpleModule, public inet::NetfilterBase::HookBase
   protected:
     inet::ModuleRefByPar<inet::INetfilter> networkProtocol;
     struct ttrEntry {
-        inet::L3Address newLoc;
+        Locator newLoc;
         bool active;
         simtime_t TTL;
         cMessage* destructMsg;
@@ -55,8 +57,8 @@ class Ttr : public cSimpleModule, public inet::NetfilterBase::HookBase
   public:
     Ttr() {};
     virtual ~Ttr();
-    virtual void addTTREntry(inet::L3Address newLoc, inet::L3Address oldLoc, simtime_t TTL = SIMTIME_ZERO);
-    virtual void activateEntry(inet::L3Address oldLoc);
+    virtual void addTTREntry(Locator newLoc, inet::L3Address oldDestName, simtime_t TTL = SIMTIME_ZERO);
+    virtual void activateEntry(inet::L3Address oldDestName); /*dest name is the PFF destination name in our dissertation*/
     virtual Result datagramPreRoutingHook(inet::Packet *datagram) override;
     virtual Result datagramForwardHook(inet::Packet *datagram) override {return ACCEPT;};
     virtual Result datagramPostRoutingHook(inet::Packet *datagram) override {return ACCEPT;};
