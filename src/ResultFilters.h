@@ -52,6 +52,30 @@ class LossTimeFilter: public cObjectResultFilter {
     #pragma clang diagnostic pop
 };
 
+class LossTimeRecorder: public HistogramRecorder {
+  protected:
+    // Assumption: the first packet has the lowest LocCorrID
+    intval_t locator_offset = -1;
+    struct loc_stats {
+        int first_seqnum_rerouted = -1; //
+        int first_seqnum = std::numeric_limits<int>::max();
+        int lost_pkt = 0; // packets which are lost in a normal stream...
+        int out_of_order_pkt = 0; // out-of-order is increased when a pkt with lower seqnum arrives in normal stream...
+        int last_seqnum = -1;
+    };
+    std::vector<loc_stats> locator;
+    virtual void init(Context *ctx) override {
+        HistogramRecorder::init(ctx);
+        locator = std::vector<loc_stats>(100);
+    };
+    virtual void finish(cResultFilter *prev) override;
+  public:
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Woverloaded-virtual"
+    virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
+    #pragma clang diagnostic pop
+};
+
 class UDPDataFilter: public cObjectResultFilter {
   protected:
     inet::PacketFilter *packetFilter;

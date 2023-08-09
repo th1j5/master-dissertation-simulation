@@ -35,6 +35,7 @@ simple UdpBasicConnectionApp extends UdpBasicApp
         @statistic[packetJitter](title="packet jitter"; source="jitter(dataAge(packetReceived))"; unit=s; record=histogram,vector; interpolationmode=none);
         //@statistic[packetJitter](title="packet jitter"; source="jitter(dataAge(merge(packetReceived,locatorUpdateReceived)))"; unit=s; record=histogram,vector; interpolationmode=none);
         @statistic[lostPackets](title="lost packets"; source="lossTime(packetReceived)"; record=histogram,vector; interpolationmode=none);
+        @statistic[lostPackets2](title="lost packets2"; source="packetReceived"; record=lossTimeRec; interpolationmode=none);
         string newLocInterface = default(""); // which NIC should be listed to for Loc updates
         string oldLocInterface = default(""); // NIC to listen to for unreachability of old Loc
         string adjacencyMgmt;

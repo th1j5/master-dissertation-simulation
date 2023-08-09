@@ -54,6 +54,73 @@ void ReroutedFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObjec
         }
     }
 }
+Register_ResultRecorder("lossTimeRec", LossTimeRecorder);
+void LossTimeRecorder::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
+    if (auto packet = dynamic_cast<Packet *>(object)) {
+        if (auto multiplexPacket = dynamicPtrCast<const MultiplexerPacket>(packet->peekAtFront())) {
+            int rerouted = multiplexPacket->getRerouted();
+            int seqnum = multiplexPacket->getSequenceNumber();
+            intval_t currentDestLoc = (intval_t) multiplexPacket->getLocUpdateCorrelationID();
+
+            if (locator_offset == -1) /*lucky strike: because the first packets are send with corrID == -1*/
+                locator_offset = currentDestLoc;
+            if (rerouted > 0)
+                throw cRuntimeError("not yet implemented, statistics for routing");
+            auto& stats = locator.at(currentDestLoc-locator_offset);
+            stats.first_seqnum = std::min(stats.first_seqnum, seqnum);
+            if (stats.last_seqnum < seqnum) {
+                if (stats.last_seqnum >= 0) // only after initialization
+                    stats.lost_pkt += seqnum - stats.last_seqnum -1;
+                stats.last_seqnum = seqnum;
+            }
+            else if (seqnum < stats.last_seqnum)
+                stats.out_of_order_pkt++;
+        }
+    }
+    // collect(t, , details);
+}
+void LossTimeRecorder::finish(cResultFilter *prev) {
+    auto loc_has_pkts = [](loc_stats& stats) { return stats.first_seqnum != std::numeric_limits<int>::max(); };
+    cOutVector first_seqnum_Vec("first_seqnum");
+    cOutVector lost_pkt_Vec("lost_pkts");
+    cOutVector out_of_order_Vec("out_of_order_pkts");
+    cOutVector last_seqnum_Vec("last_seqnum");
+
+    // start from end, then convert it back to forward_iterator
+    auto last_loc_with_stats = std::find_if(locator.rbegin(), locator.rend(), loc_has_pkts).base();
+    for(auto it = ++locator.begin(); it != last_loc_with_stats; it++) {
+        first_seqnum_Vec.recordWithTimestamp(it - locator.begin(), it->first_seqnum);
+        lost_pkt_Vec    .recordWithTimestamp(it - locator.begin(), it->lost_pkt);
+        out_of_order_Vec.recordWithTimestamp(it - locator.begin(), it->out_of_order_pkt);
+        last_seqnum_Vec .recordWithTimestamp(it - locator.begin(), it->last_seqnum);
+
+        if (it->first_seqnum != std::numeric_limits<int>::max()) {
+            auto it_prev = it-1;
+            while (it_prev->last_seqnum == -1) {
+                if (it_prev == locator.begin())
+                    throw cRuntimeError("Tried to go past the beginning");
+                it_prev--;
+            }
+            collect(0, it->first_seqnum - it_prev->last_seqnum, nullptr);
+        }
+        else {
+            // warn for locators without stats
+            EV_WARN << "Locator change numero" << it - locator.begin() << "has no received data packets" << endl;
+        }
+//        else if (auto next_loc_with_stats = std::find_if(it, locator.end(), loc_has_pkts); next_loc_with_stats != locator.end()) {
+//
+//        }
+        EV_WARN << "Locator change numero " << it-locator.begin() << " has lost " << it->lost_pkt
+                << " packets in a normal stream and " << it->out_of_order_pkt << "out-of-order packets in a normal stream" << endl;
+        if (it->lost_pkt != it->out_of_order_pkt) {
+            //throw cRuntimeError("Locator change numero %ld has lost %d packets in a normal stream and only received %d out-of-order", it-locator.begin(), it->lost_pkt, it->out_of_order_pkt);
+        }
+    }
+
+    // collect all here!
+    HistogramRecorder::finish(prev);
+}
+
 
 Register_ResultFilter("lossTime", LossTimeFilter);
 void LossTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
