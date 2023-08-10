@@ -76,6 +76,20 @@ class LossTimeRecorder: public HistogramRecorder {
     #pragma clang diagnostic pop
 };
 
+//class HistogramArrivalRecorder: public cKSplit {
+//  protected:
+//    virtual void init(Context *ctx) override {
+//        HistogramRecorder::init(ctx);
+//        locator = std::vector<loc_stats>(100);
+//    };
+//    virtual void finish(cResultFilter *prev) override;
+//  public:
+//    #pragma clang diagnostic push
+//    #pragma clang diagnostic ignored "-Woverloaded-virtual"
+//    virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
+//    #pragma clang diagnostic pop
+//};
+
 class UDPDataFilter: public cObjectResultFilter {
   protected:
     inet::PacketFilter *packetFilter;
@@ -94,5 +108,18 @@ class NodeIDFilter: public cObjectResultFilter {
     #pragma clang diagnostic ignored "-Woverloaded-virtual"
     virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
     #pragma clang diagnostic pop
+};
+
+class ArrivalTimeFilter: public cObjectResultFilter {
+  public:
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Woverloaded-virtual"
+    virtual void receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) override;
+    #pragma clang diagnostic pop
+};
+
+class StopBandFilter: public cNumericResultFilter {
+  public:
+    virtual bool process(simtime_t& t, double& value, cObject *details) override;
 };
 #endif /* RESULTFILTERS_H_ */

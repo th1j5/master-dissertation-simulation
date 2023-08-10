@@ -131,6 +131,9 @@ void LossTimeRecorder::finish(cResultFilter *prev) {
     HistogramRecorder::finish(prev);
 }
 
+// Register_ResultRecorder("histogramArrival", HistogramArrivalRecorder);
+// void HistogramArrivalRecorder::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
+
 
 Register_ResultFilter("lossTime", LossTimeFilter);
 void LossTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
@@ -254,4 +257,19 @@ void NodeIDFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject 
         auto nodeID = node->getId();
         fire(this, t, (intval_t) nodeID, details);
     }
+}
+Register_ResultFilter("arrivalTime", ArrivalTimeFilter);
+void ArrivalTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details) {
+    if (auto msg = dynamic_cast<cMessage*>(object)) {
+        fire(this, t, msg->getArrivalTime(), details);
+    }
+}
+Register_ResultFilter("stopBand", StopBandFilter);
+bool StopBandFilter::process(simtime_t& t, double& value, cObject *details) {
+    double stopband = 0.002; // seconds
+    double accuracy = 0.00001; // 0.01 ms
+    if (stopband-accuracy <= value && value <= stopband+accuracy) // TODO: parameter for the stopband value
+        return false;
+    else
+        return true; // invoke chained listeners
 }

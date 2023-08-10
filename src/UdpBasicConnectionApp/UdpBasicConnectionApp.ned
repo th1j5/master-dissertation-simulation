@@ -32,10 +32,14 @@ simple UdpBasicConnectionApp extends UdpBasicApp
 //        @statistic[corrIDTag](title="corrID for tags"; source="locUpdateCorrelation(packetReceived)"; record=vector; interpolationmode=none);
 //        @statistic[reroutedTag](title="is packet rerouted"; source="rerouted(packetReceived)"; record=vector; interpolationmode=none);
         @statistic[endToEndDelay](title="end-to-end delay"; source="dataAge(packetReceived)"; unit=s; record=histogram,vector; interpolationmode=none);
-        @statistic[packetJitter](title="packet jitter"; source="jitter(dataAge(packetReceived))"; unit=s; record=histogram,vector; interpolationmode=none);
+        @statistic[packetDelayJitter](title="packet delay jitter"; source="jitter(dataAge(packetReceived))"; unit=s; record=histogram,vector; interpolationmode=none);
+        @statistic[packetArrivalJitter] (title="packet arrival jitter";  source="jitter(arrivalTime(packetReceived))"; unit=s; record=histogram,vector; interpolationmode=none);
+        @statistic[packetArrivalJitter2](title="packet arrival jitter2"; source="jitter(arrivalTime(packetReceived))"; unit=s; record=ksplit,vector; interpolationmode=none);
+        @statistic[packetArrivalJitterMeanFiltered](title="packet arrival jitter filtered"; source="stopBand(jitter(arrivalTime(packetReceived)))"; unit=s; record=ksplit,histogram,vector; interpolationmode=none);
+        @statistic[packetArrivalJitterRepeatFiltered](title="packet arrival jitter filtered (rpt)"; source="removeRepeats(jitter(arrivalTime(packetReceived)))"; unit=s; record=ksplit,histogram,vector; interpolationmode=none);
         //@statistic[packetJitter](title="packet jitter"; source="jitter(dataAge(merge(packetReceived,locatorUpdateReceived)))"; unit=s; record=histogram,vector; interpolationmode=none);
-        @statistic[lostPackets](title="lost packets"; source="lossTime(packetReceived)"; record=histogram,vector; interpolationmode=none);
-        @statistic[lostPackets2](title="lost packets2"; source="packetReceived"; record=lossTimeRec; interpolationmode=none);
+        //@statistic[lostPackets](title="lost packets"; source="lossTime(packetReceived)"; record=histogram,vector; interpolationmode=none);
+        @statistic[lostPackets2](title="lost packets"; source="packetReceived"; record=lossTimeRec; interpolationmode=none);
         string newLocInterface = default(""); // which NIC should be listed to for Loc updates
         string oldLocInterface = default(""); // NIC to listen to for unreachability of old Loc
         string adjacencyMgmt;
