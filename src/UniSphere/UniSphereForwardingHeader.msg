@@ -23,7 +23,6 @@ import inet.networklayer.nexthop.NextHopForwardingHeader;
 class UniSphereForwardingHeader extends inet::NextHopForwardingHeader {
     // destination is node ID
     /// Landmark identifier
-    // path[0] TODO?? check
     /// Reverse routing path
     RoutingPath path @byValue;
 }

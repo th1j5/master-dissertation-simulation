@@ -295,8 +295,7 @@ bool UniSphereControlPlane::keepBestRoute(UniSphereRoute* newRoute) {
         newRoute->active = true;
     }
     else {
-        if (!oldRoute->active)
-            throw cRuntimeError("previous best route was not active??");
+        oldRoute->active = true; // previous best route was not active??
         newRoute->active = false;
     }
     return true; // imported newRoute
