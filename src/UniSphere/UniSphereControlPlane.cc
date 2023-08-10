@@ -162,19 +162,14 @@ void UniSphereControlPlane::processPathAnnounce(Packet *pkt) {
         route->RIB = numNewNeighConnected;
 
     /* attempt to import if better route */
-    // in U-Sphere, a route can be imported, even if it's not better TODO
+    // in U-Sphere, a route can be imported, even if it's not better
     bool isImported = importRoute(route);
     if (!isImported)
         delete route;
 
     /* If import results in better route, export this route to all neighbours */
-    //TODO
-    if (isImported) {
-
+    if (isImported && route->active) {
         for (auto peer: getConnectedNeigh(irt)) {
-//            auto payload = staticPtrCast<PathAnnounce>(ctrlMessage->dupShared()); //FIXME dupShared()??
-//            payload->setChunkLength(payload->getChunkLength()+B(1)); // FIXME
-//            payload->appendForward_path(getHostID(host)); // add ourselves to forward path
             sendToNeighbourProtected(getHostID(peer), route);
         }
     }
@@ -285,6 +280,7 @@ bool UniSphereControlPlane::importRoute(UniSphereRoute *newRoute) {
     return importedNewRoute;
 }
 
+/* return true if newRoute is inserted, regardless if it is best or not */
 bool UniSphereControlPlane::keepBestRoute(UniSphereRoute* newRoute) {
     // TODO: look at RIB information?
     // if there is no oldRoute OR if the newRoute is better, add newRoute
@@ -297,12 +293,13 @@ bool UniSphereControlPlane::keepBestRoute(UniSphereRoute* newRoute) {
             oldRoute->active = false;
         }
         newRoute->active = true;
-        return true; // imported newRoute
     }
     else {
+        if (!oldRoute->active)
+            throw cRuntimeError("previous best route was not active??");
         newRoute->active = false;
-        return false; // kept oldRoute
     }
+    return true; // imported newRoute
 }
 
 bool UniSphereControlPlane::retract(L3Address dest) {
