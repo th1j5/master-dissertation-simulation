@@ -29,6 +29,7 @@
 #include "ReqRspLocMessage_m.h"
 #include "LocUpdatable/LocUpdatable.h"
 #include "AdjacencyManager/AdjacencyManager.h"
+#include "TTR/Ttr.h"
 
 using namespace omnetpp;
 
@@ -39,6 +40,7 @@ class HierarchicalLocAssignAlgo: public inet::RoutingProtocolBase, protected omn
 
   protected:
     // server
+    inet::ModuleRefByPar<Ttr> ttr; // TTR table to update
     // ID -> Loc
     typedef std::map<inet::L3Address, inet::L3Address> LocLeased;
     LocLeased leased; // client -> used to map neigh->assignedLoc

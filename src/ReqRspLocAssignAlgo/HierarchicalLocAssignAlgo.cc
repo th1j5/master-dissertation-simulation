@@ -73,7 +73,7 @@ void HierarchicalLocAssignAlgo::initialize(int stage) {
         // client
 //        arp.reference(this, "arpModule", true);
         // server
-//        ttr.reference(this, "transientTriangularRoutingModule", false); // false, when tested
+        ttr.reference(this, "transientTriangularRoutingModule", false); // false, when tested
 
         peerIn = gate("networkLayerIn");
         peerOut = gate("networkLayerOut");

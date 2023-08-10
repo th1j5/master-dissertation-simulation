@@ -42,6 +42,7 @@ simple HierarchicalLocAssignAlgo like ILocUpdatable {
 
         // Should be part of general control plane, not this/here
         string locChangingStrategy = default("end2end"); // Which strategy to use for Loc changes
+        string transientTriangularRoutingModule = default("^.generic.ttrTable");
     gates:
         input networkLayerIn;
         output networkLayerOut;
