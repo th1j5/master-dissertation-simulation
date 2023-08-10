@@ -64,17 +64,29 @@ void LossTimeRecorder::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObj
 
             if (locator_offset == -1) /*lucky strike: because the first packets are send with corrID == -1*/
                 locator_offset = currentDestLoc;
+            if (currentDestLoc == -1)
+                currentDestLoc = locator_offset; /*extend our lucky strike for those first packets which are out-of-order*/
             if (rerouted > 0)
                 throw cRuntimeError("not yet implemented, statistics for routing");
-            auto& stats = locator.at(currentDestLoc-locator_offset);
-            stats.first_seqnum = std::min(stats.first_seqnum, seqnum);
-            if (stats.last_seqnum < seqnum) {
-                if (stats.last_seqnum >= 0) // only after initialization
-                    stats.lost_pkt += seqnum - stats.last_seqnum -1;
-                stats.last_seqnum = seqnum;
+
+            try {
+                auto& stats = locator.at(currentDestLoc-locator_offset);
+                stats.first_seqnum = std::min(stats.first_seqnum, seqnum);
+                if (stats.last_seqnum < seqnum) {
+                    if (stats.last_seqnum >= 0) // only after initialization
+                        stats.lost_pkt += seqnum - stats.last_seqnum -1;
+                    stats.last_seqnum = seqnum;
+                }
+                else if (seqnum < stats.last_seqnum)
+                    stats.out_of_order_pkt++;
+            } catch (const std::exception& e) {
+                if (locator.size() <= currentDestLoc - locator_offset) {
+                    EV_ERROR << "stats vector is too small (" << locator.size() <<"): currentDestLoc " << currentDestLoc
+                            << " locator_offset: " << locator_offset << " diff: " << currentDestLoc-locator_offset << endl;
+                    locator.resize(locator.size()+100);
+                    EV_ERROR << "New size:" << locator.size() << endl;
+                }
             }
-            else if (seqnum < stats.last_seqnum)
-                stats.out_of_order_pkt++;
         }
     }
     // collect(t, , details);
@@ -110,14 +122,8 @@ void LossTimeRecorder::finish(cResultFilter *prev) {
                 // warn for locators without stats
                 EV_WARN << "Locator change numero" << it - locator.begin() << "has no received data packets" << endl;
             }
-    //        else if (auto next_loc_with_stats = std::find_if(it, locator.end(), loc_has_pkts); next_loc_with_stats != locator.end()) {
-    //
-    //        }
             EV_WARN << "Locator change numero " << it-locator.begin() << " has lost " << it->lost_pkt
                     << " packets in a normal stream and " << it->out_of_order_pkt << "out-of-order packets in a normal stream" << endl;
-            if (it->lost_pkt != it->out_of_order_pkt) {
-                //throw cRuntimeError("Locator change numero %ld has lost %d packets in a normal stream and only received %d out-of-order", it-locator.begin(), it->lost_pkt, it->out_of_order_pkt);
-            }
         }
     }
 
