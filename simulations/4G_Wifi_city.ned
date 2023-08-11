@@ -22,6 +22,7 @@ network Wifi_4G_city1 extends basic_network
 {
     parameters:
         @display("bgb=600,600;bgg=100,1,grey95");
+        bool serverActivated = default(true);
         int numUsers;
         int numHomesPerStreet;
         int numStreetsPerQuarter;
@@ -39,27 +40,23 @@ network Wifi_4G_city1 extends basic_network
         @statistic[locUpdSent](source=users[0].app[0].locatorUpdateSent; record=figure(count); targetFigure=sentLocUpdText);
         @statistic[locUpdRcvd](source=server.app[0].locatorUpdateReceived; record=figure(count); targetFigure=rcvdLocUpdText);
     submodules:
-        server: RoutingNode {
+        server: RoutingNode if serverActivated {
             parameters:
                 @display("p=300,-100;i=device/server");
         }
         users[numUsers]: MobileNode {
             @display("p=27.692308,210.76924");
         }
-        providerY: RoutingNode {
-            @display("p=300,-30");
-        }
+        providerShort: RoutingNode { @display("p=300,-30"); }
+        providerLong: RoutingNode { @display("p=500,-30"); }
+        providerZ: RoutingNode { @display("p=350,-50"); }
+//        backbone: RoutingNode {
+//            @display("p=366,-25");
+//        }
+        IXP: RoutingNode  { @display("p=433,-35"); }
+        IXP2: RoutingNode { @display("p=233,-30"); }
         mobileTower[num4G]: NeighbourNode {
             @display("i=device/antennatower_l");
-        }
-        providerX: RoutingNode {
-            @display("p=500,-30");
-        }
-        backbone: RoutingNode {
-            @display("p=366,-25");
-        }
-        IXP: RoutingNode {
-            @display("p=433,-35");
         }
         homes[numHomesPerStreet*numStreetsPerQuarter*numQuarters]: NeighbourNode {
             @display("i=device/accesspoint_s");
@@ -71,18 +68,21 @@ network Wifi_4G_city1 extends basic_network
             @display("i=abstract/router_s");
         }
     connections:
-        server.pppg++ <--> DelayLink {delay=30ms;} <--> providerY.pppg++;
+        server.pppg++ <--> DelayLink {@display("ls=,2");} <--> providerZ.pppg++ if serverActivated;
+        providerZ.pppg++ <--> DelayLink {delay=50ms;@display("ls=,3");} <--> IXP.pppg++;
+        providerZ.pppg++ <--> DelayLink {delay=40ms;@display("ls=,3");} <--> IXP2.pppg++;
+        providerShort.pppg++ <--> DelayLink {@display("ls=,3");} <--> IXP.pppg++;
+        providerShort.pppg++ <--> DelayLink {@display("ls=,3");} <--> IXP2.pppg++;
+        providerLong.pppg++  <--> DelayLink {@display("ls=,3");} <--> IXP.pppg++;
+
         for i=0..num4G-1 {
-            mobileTower[i].pppg++ <--> DelayLink <--> providerX.pppg++;
+            mobileTower[i].pppg++ <--> DelayLink {@display("ls=,2");} <--> providerLong.pppg++;
         }
-        providerY.pppg++ <--> DelayLink {delay=15ms;} <--> backbone.pppg++;
-        IXP.pppg++ <--> DelayLink <--> backbone.pppg++;
-        IXP.pppg++ <--> DelayLink <--> providerX.pppg++;
         for i=0..numQuarters-1 {
-            providerY.pppg++ <--> DelayLink <--> quarterCabin[i].pppg++;
+            providerShort.pppg++ <--> DelayLink {@display("ls=,3");} <--> quarterCabin[i].pppg++;
         }
         for i=0..numQuarters-1, for j=0..numStreetsPerQuarter-1 {
-            quarterCabin[i].pppg++ <--> DelayLink <--> streetCabin[i*numStreetsPerQuarter+j].pppg++;
+            quarterCabin[i].pppg++ <--> DelayLink {@display("ls=,2");} <--> streetCabin[i*numStreetsPerQuarter+j].pppg++;
         }
         for i=0..numQuarters-1, for j=0..numStreetsPerQuarter-1, for k=0..numHomesPerStreet-1 {
             streetCabin[i*numStreetsPerQuarter+j].pppg++ <--> DelayLink <--> homes[i*numHomesPerStreet*numStreetsPerQuarter+j*numHomesPerStreet+k].pppg++;
