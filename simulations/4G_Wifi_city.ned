@@ -47,7 +47,7 @@ network Wifi_4G_city1 extends basic_network
         users[numUsers]: MobileNode {
             @display("p=27.692308,210.76924");
         }
-        providerShort: RoutingNode { @display("p=300,-30"); }
+        providerShort: RoutingNode { @display("p=300,-15"); }
         providerLong: RoutingNode { @display("p=500,-30"); }
         providerZ: RoutingNode { @display("p=350,-50"); }
 //        backbone: RoutingNode {

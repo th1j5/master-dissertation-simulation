@@ -17,6 +17,7 @@ package prototype;
 
 channel DelayLink extends ned.DatarateChannel {
     parameters:
+        //@display("ls=,3");
         datarate = default(1Gbps);
-        delay = default(10ms);
+        delay = default(5ms);
 }
