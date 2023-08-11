@@ -60,6 +60,7 @@ void LossTimeRecorder::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObj
         if (auto multiplexPacket = dynamicPtrCast<const MultiplexerPacket>(packet->peekAtFront())) {
             int rerouted = multiplexPacket->getRerouted();
             int seqnum = multiplexPacket->getSequenceNumber();
+            simtime_t arrTime = packet->getArrivalTime();
             intval_t currentDestLoc = (intval_t) multiplexPacket->getLocUpdateCorrelationID();
 
             if (locator_offset == -1) /*lucky strike: because the first packets are send with corrID == -1*/
@@ -69,13 +70,18 @@ void LossTimeRecorder::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObj
             if (rerouted > 0)
                 throw cRuntimeError("not yet implemented, statistics for routing");
 
+            intval_t index = currentDestLoc - locator_offset;
+            if (locator.size() <= index && index < 10000)
+                locator.resize(index+1);
             try {
-                auto& stats = locator.at(currentDestLoc-locator_offset);
+                auto& stats = locator.at(index);
                 stats.first_seqnum = std::min(stats.first_seqnum, seqnum);
+                stats.first_time = std::min(stats.first_time, arrTime);
                 if (stats.last_seqnum < seqnum) {
                     if (stats.last_seqnum >= 0) // only after initialization
                         stats.lost_pkt += seqnum - stats.last_seqnum -1;
                     stats.last_seqnum = seqnum;
+                    stats.last_time = arrTime;
                 }
                 else if (seqnum < stats.last_seqnum)
                     stats.out_of_order_pkt++;
@@ -91,23 +97,50 @@ void LossTimeRecorder::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObj
     }
     // collect(t, , details);
 }
+void LossTimeRecorder::init(Context *ctx) {
+    HistogramRecorder::init(ctx);
+    auto hist = check_and_cast<cHistogram*>(getStatistic());
+    // bins are in amount of packets, need to rescale to milliseconds
+    hist->setMode(cHistogram::MODE_INTEGERS);
+    hist->setStrategy(nullptr);
+//    if (auto strategy = dynamic_cast<cPrecollectionBasedHistogramStrategy*>(hist->getStrategy()))
+//        strategy->setNumToPrecollect(0);
+    hist->createUniformBins(0, 10, 1);
+    hist->extendBinsTo(100, 5);
+    hist->extendBinsTo(1000, 20);
+    hist->extendBinsTo(4000, 50);
+    locator = std::vector<loc_stats>(100);
+};
 void LossTimeRecorder::finish(cResultFilter *prev) {
+    // TODO: hardcoded constants
+    double sendInterval = 2; // [ms]
+    int conversionFactor = 1000; // going from [s] to [ms]
+
     auto loc_has_pkts = [](loc_stats& stats) { return stats.first_seqnum != std::numeric_limits<int>::max(); };
     cOutVector first_seqnum_Vec("first_seqnum");
     cOutVector lost_pkt_Vec("lost_pkts");
     cOutVector out_of_order_Vec("out_of_order_pkts");
     cOutVector last_seqnum_Vec("last_seqnum");
+    cOutVector first_time_Vec("first_time");
+    cOutVector last_time_Vec("last_time");
+    cOutVector pkt_jitter_Vec("pkt_jitter_between_loc_vec");
+    cHistogram pkt_jitter("pkt_jitter_between_loc");
+    first_time_Vec.setUnit("s");
+    last_time_Vec.setUnit("s");
+    pkt_jitter_Vec.setUnit("ms");
 
     // start from end, then convert it back to forward_iterator
     auto last_loc_with_stats = std::find_if(locator.rbegin(), locator.rend(), loc_has_pkts).base();
-    if (last_loc_with_stats == locator.begin());
-        //throw cRuntimeError("No locators with stats..."); // server has no stats...
+    if (last_loc_with_stats == locator.begin())
+        ;//throw cRuntimeError("No locators with stats..."); // server has no stats...
     else {
         for(auto it = ++locator.begin(); it != last_loc_with_stats; it++) {
             first_seqnum_Vec.recordWithTimestamp(it - locator.begin(), it->first_seqnum);
             lost_pkt_Vec    .recordWithTimestamp(it - locator.begin(), it->lost_pkt);
             out_of_order_Vec.recordWithTimestamp(it - locator.begin(), it->out_of_order_pkt);
             last_seqnum_Vec .recordWithTimestamp(it - locator.begin(), it->last_seqnum);
+            first_time_Vec  .recordWithTimestamp(it - locator.begin(), it->first_time);
+            last_time_Vec   .recordWithTimestamp(it - locator.begin(), it->last_time);
 
             if (it->first_seqnum != std::numeric_limits<int>::max()) {
                 auto it_prev = it-1;
@@ -116,7 +149,13 @@ void LossTimeRecorder::finish(cResultFilter *prev) {
                         throw cRuntimeError("Tried to go past the beginning");
                     it_prev--;
                 }
-                collect(0, it->first_seqnum - it_prev->last_seqnum - 1, nullptr);
+                int lostPackets = it->first_seqnum - it_prev->last_seqnum - 1;
+                collect(0, lostPackets*sendInterval, nullptr); // lossTime in [ms]
+                // TODO: conversion to ms... now, hardcoded
+                // diff between ArrivalTime of first pkt new loc & last pkt old loc
+                // then all lost packets removed & finally corrected for sendInterval, such that jitter == 0 when there is a perfect transition
+                pkt_jitter_Vec.record(conversionFactor*(it->first_time - it_prev->last_time) - lostPackets*sendInterval - sendInterval);
+                pkt_jitter.collect(conversionFactor*(it->first_time - it_prev->last_time) - lostPackets*sendInterval - sendInterval);
             }
             else {
                 // warn for locators without stats
@@ -128,6 +167,7 @@ void LossTimeRecorder::finish(cResultFilter *prev) {
     }
 
     // collect all here!
+    pkt_jitter.recordWithUnit("ms");
     HistogramRecorder::finish(prev);
 }
 

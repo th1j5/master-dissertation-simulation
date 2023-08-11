@@ -39,7 +39,7 @@ simple UdpBasicConnectionApp extends UdpBasicApp
         @statistic[packetArrivalJitterRepeatFiltered](title="packet arrival jitter filtered (rpt)"; source="removeRepeats(jitter(arrivalTime(packetReceived)))"; unit=s; record=ksplit,histogram,vector; interpolationmode=none);
         //@statistic[packetJitter](title="packet jitter"; source="jitter(dataAge(merge(packetReceived,locatorUpdateReceived)))"; unit=s; record=histogram,vector; interpolationmode=none);
         //@statistic[lostPackets](title="lost packets"; source="lossTime(packetReceived)"; record=histogram,vector; interpolationmode=none);
-        @statistic[lostPackets2](title="lost packets"; source="packetReceived"; record=lossTimeRec; interpolationmode=none);
+        @statistic[lostPackets2](title="lost packets"; source="packetReceived"; unit=ms; record=lossTimeRec; interpolationmode=none); // FIXME: code makes sure it is indeed in ms
         string newLocInterface = default(""); // which NIC should be listed to for Loc updates
         string oldLocInterface = default(""); // NIC to listen to for unreachability of old Loc
         string adjacencyMgmt;

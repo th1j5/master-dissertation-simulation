@@ -57,17 +57,16 @@ class LossTimeRecorder: public HistogramRecorder {
     // Assumption: the first packet has the lowest LocCorrID
     intval_t locator_offset = -1;
     struct loc_stats {
-        int first_seqnum_rerouted = -1; //
+        //int first_seqnum_rerouted = -1; //
         int first_seqnum = std::numeric_limits<int>::max();
+        simtime_t first_time = SimTime::getMaxTime();
         int lost_pkt = 0; // packets which are lost in a normal stream...
         int out_of_order_pkt = 0; // out-of-order is increased when a pkt with lower seqnum arrives in normal stream...
         int last_seqnum = -1;
+        simtime_t last_time = 0;
     };
     std::vector<loc_stats> locator;
-    virtual void init(Context *ctx) override {
-        HistogramRecorder::init(ctx);
-        locator = std::vector<loc_stats>(100);
-    };
+    virtual void init(Context *ctx) override;
     virtual void finish(cResultFilter *prev) override;
   public:
     #pragma clang diagnostic push
