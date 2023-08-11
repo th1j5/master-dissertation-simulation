@@ -106,6 +106,7 @@ void LossTimeRecorder::init(Context *ctx) {
 //    if (auto strategy = dynamic_cast<cPrecollectionBasedHistogramStrategy*>(hist->getStrategy()))
 //        strategy->setNumToPrecollect(0);
     hist->createUniformBins(0, 10, 1);
+    hist->extendBinsTo(30, 2);
     hist->extendBinsTo(100, 5);
     hist->extendBinsTo(1000, 20);
     hist->extendBinsTo(4000, 50);
@@ -113,7 +114,7 @@ void LossTimeRecorder::init(Context *ctx) {
 };
 void LossTimeRecorder::finish(cResultFilter *prev) {
     // TODO: hardcoded constants
-    double sendInterval = 2; // [ms]
+    double sendInterval = 1; // [ms]
     int conversionFactor = 1000; // going from [s] to [ms]
 
     auto loc_has_pkts = [](loc_stats& stats) { return stats.first_seqnum != std::numeric_limits<int>::max(); };
@@ -306,7 +307,7 @@ void ArrivalTimeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cOb
 }
 Register_ResultFilter("stopBand", StopBandFilter);
 bool StopBandFilter::process(simtime_t& t, double& value, cObject *details) {
-    double stopband = 0.002; // seconds
+    double stopband = 0.001; // seconds
     double accuracy = 0.00001; // 0.01 ms
     if (stopband-accuracy <= value && value <= stopband+accuracy) // TODO: parameter for the stopband value
         return false;
