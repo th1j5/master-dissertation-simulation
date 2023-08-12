@@ -128,6 +128,7 @@ void LossTimeRecorder::finish(cResultFilter *prev) {
     cHistogram pkt_jitter("pkt_jitter_between_loc");
     first_time_Vec.setUnit("s");
     last_time_Vec.setUnit("s");
+    pkt_jitter_Vec.setInterpolationMode(cOutVector::InterpolationMode::NONE);
     pkt_jitter_Vec.setUnit("ms");
 
     // start from end, then convert it back to forward_iterator
@@ -155,7 +156,7 @@ void LossTimeRecorder::finish(cResultFilter *prev) {
                 // TODO: conversion to ms... now, hardcoded
                 // diff between ArrivalTime of first pkt new loc & last pkt old loc
                 // then all lost packets removed & finally corrected for sendInterval, such that jitter == 0 when there is a perfect transition
-                pkt_jitter_Vec.record(conversionFactor*(it->first_time - it_prev->last_time) - lostPackets*sendInterval - sendInterval);
+                pkt_jitter_Vec.recordWithTimestamp(it - locator.begin(), conversionFactor*(it->first_time - it_prev->last_time) - lostPackets*sendInterval - sendInterval);
                 pkt_jitter.collect(conversionFactor*(it->first_time - it_prev->last_time) - lostPackets*sendInterval - sendInterval);
             }
             else {
